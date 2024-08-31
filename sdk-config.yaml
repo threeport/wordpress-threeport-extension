@@ -1,0 +1,24 @@
+ExtensionName: Wordpress
+#CliName: wpctl
+ApiNamespace: lander2k2.com
+ApiDocs:
+  Title: WordPress Threeport API
+  Description: API server for the WordPress extension to Threeport.
+  ContactName: Richard Laner
+  ContactEmail: lander2k2@gmail.com
+ImageRepo: richlander2k2
+#Overwrites:
+#  - "cmd/database-migrator/migrations/000001_init.go"
+ApiObjectGroups:
+- Name: wordpress
+  Objects:
+    - Name: WordpressDefinition
+      Versions:
+        - v0
+        #- v1
+      Reconcilable: true
+    - Name: WordpressInstance
+      Versions:
+        - v0
+        #- v1
+      Reconcilable: true
