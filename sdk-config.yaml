@@ -1,5 +1,4 @@
 ExtensionName: Wordpress
-#CliName: wpctl
 ApiNamespace: lander2k2.com
 ApiDocs:
   Title: WordPress Threeport API

@@ -26,7 +26,3 @@ func BuildWpctl() error {
 
 	return nil
 }
-
-func InstallWordpress() error {
-	return nil
-}

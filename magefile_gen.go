@@ -214,6 +214,27 @@ func LoadImage(kindClusterName string, component string) error {
 	return nil
 }
 
+// BuildPlugin compiles the extension's tptctl plugin
+func BuildPlugin() error {
+	buildCmd := exec.Command(
+		"go",
+		"build",
+		"-o",
+		"bin/wordpress.so",
+		"-buildmode=plugin",
+		"cmd/wordpress/main_gen.go",
+	)
+
+	output, err := buildCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("build failed for tptctl plugin with output '%s': %w", output, err)
+	}
+
+	fmt.Println("tptctl plugin built and available at bin/wordpress")
+
+	return nil
+}
+
 // Docs generates the API server documentation that is served by the API
 func Docs() error {
 	docsDestination := "pkg/api-server/v0/docs"
