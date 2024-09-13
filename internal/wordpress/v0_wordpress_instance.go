@@ -8,7 +8,7 @@ import (
 	v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 )
 
-// v0WordpressInstanceCreated performs reconciliation when a v0 workload definition
+// v0WordpressInstanceCreated performs reconciliation when a v0 WordpressInstance
 // has been created.
 func v0WordpressInstanceCreated(
 	r *controller.Reconciler,
@@ -18,7 +18,7 @@ func v0WordpressInstanceCreated(
 	return 0, nil
 }
 
-// v0WordpressInstanceUpdated performs reconciliation when a v0 workload definition
+// v0WordpressInstanceUpdated performs reconciliation when a v0 WordpressInstance
 // has been updated.
 func v0WordpressInstanceUpdated(
 	r *controller.Reconciler,
@@ -28,7 +28,7 @@ func v0WordpressInstanceUpdated(
 	return 0, nil
 }
 
-// v0WordpressInstanceDeleted performs reconciliation when a v0 workload definition
+// v0WordpressInstanceDeleted performs reconciliation when a v0 WordpressInstance
 // has been deleted.
 func v0WordpressInstanceDeleted(
 	r *controller.Reconciler,
