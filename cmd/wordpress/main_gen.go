@@ -4,10 +4,12 @@ package main
 
 import (
 	cobra "github.com/spf13/cobra"
+	cli "github.com/threeport/threeport/pkg/cli/v0"
 	cmd "github.com/threeport/wordpress-threeport-extension/cmd/wordpress/cmd"
 )
 
 // Register registers this plugin with tptctl.
-func Register(rootCmd *cobra.Command) {
+func Register(rootCmd *cobra.Command, cliArgs *cli.GenesisControlPlaneCLIArgs) {
+	cmd.CliArgs = cliArgs
 	rootCmd.AddCommand(cmd.WordpressCmd)
 }

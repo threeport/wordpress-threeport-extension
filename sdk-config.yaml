@@ -16,8 +16,13 @@ ApiObjectGroups:
         - v0
         #- v1
       Reconcilable: true
+      Tptctl:
+        Enabled: true
     - Name: WordpressInstance
       Versions:
         - v0
         #- v1
       Reconcilable: true
+      Tptctl:
+        Enabled: true
+

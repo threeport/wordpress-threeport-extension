@@ -2,7 +2,12 @@
 
 package cmd
 
-import cobra "github.com/spf13/cobra"
+import (
+	cobra "github.com/spf13/cobra"
+	cli "github.com/threeport/threeport/pkg/cli/v0"
+)
+
+var CliArgs = &cli.GenesisControlPlaneCLIArgs{}
 
 // WordpressCmd represents the wordpress command which is the root command for
 // the wordpress plugin.
