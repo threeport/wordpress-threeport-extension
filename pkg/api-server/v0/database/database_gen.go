@@ -18,8 +18,6 @@ import (
 	"time"
 )
 
-const ThreeportWordpressDatabaseName = "threeport_wordpress_api"
-
 // ZapLogger is a custom GORM logger that forwards log messages to a Zap logger.
 type ZapLogger struct {
 	Logger *zap.Logger

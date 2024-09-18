@@ -5,9 +5,7 @@ package v0
 import (
 	"context"
 	"fmt"
-	tp_database "github.com/threeport/threeport/pkg/api-server/v0/database"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
-	database "github.com/threeport/wordpress-threeport-extension/pkg/api-server/v0/database"
 	errors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,27 +54,6 @@ func NewInstaller(
 
 // InstallWordpressExtension installs the controller and API for the wordpress extension.
 func (i *Installer) InstallWordpressExtension() error {
-	// get NATS service name from cluster
-	gvr := schema.GroupVersionResource{
-		Group:    "",
-		Resource: "services",
-		Version:  "v1",
-	}
-	services, err := i.KubeClient.Resource(gvr).Namespace(i.ThreeportNamespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: natsLabelSelector},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve NATS service name: %w", err)
-	}
-	if len(services.Items) != 1 {
-		return fmt.Errorf(
-			"expected one NATS service with label '%s' but found %d",
-			natsLabelSelector,
-			len(services.Items),
-		)
-	}
-	natsServiceName := services.Items[0].GetName()
-
 	// create namespace
 	var namespace = &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -137,32 +114,14 @@ func (i *Installer) InstallWordpressExtension() error {
 		return fmt.Errorf("failed to copy secret: %w", err)
 	}
 
-	// create secret for database connection
-	var apiSecret = &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Secret",
-			"metadata": map[string]interface{}{
-				"name":      "db-config",
-				"namespace": i.ExtensionNamespace,
-			},
-			"stringData": map[string]interface{}{
-				"env": fmt.Sprintf(
-					"DB_HOST=%s.%s.svc.cluster.local\nDB_USER=%s\nDB_NAME=%s\nDB_PORT=%s\nDB_SSL_MODE=%s\nNATS_HOST=%s.%s.svc.cluster.local\nNATS_PORT=4222\n",
-					tp_database.ThreeportDatabaseHost,
-					i.ThreeportNamespace,
-					tp_database.ThreeportDatabaseUser,
-					database.ThreeportWordpressDatabaseName,
-					tp_database.ThreeportDatabasePort,
-					tp_database.ThreeportDatabaseSslMode,
-					natsServiceName,
-					i.ThreeportNamespace,
-				),
-			},
-		},
-	}
-	if _, err := kube.CreateOrUpdateResource(apiSecret, i.KubeClient, *i.KubeRestMapper); err != nil {
-		return fmt.Errorf("failed to create/update API server secret for DB connection: %w", err)
+	if err := copySecret(
+		i.KubeClient,
+		*i.KubeRestMapper,
+		"db-config",
+		i.ThreeportNamespace,
+		i.ExtensionNamespace,
+	); err != nil {
+		return fmt.Errorf("failed to copy secret: %w", err)
 	}
 
 	// create configmap used to initialize API database
