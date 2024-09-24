@@ -20,7 +20,7 @@ func GetWordpressDefinitions(apiClient *http.Client, apiAddr string) (*[]v0.Word
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions", apiAddr),
+		fmt.Sprintf("%s%s", apiAddr, v0.PathWordpressDefinitions),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -50,7 +50,7 @@ func GetWordpressDefinitionByID(apiClient *http.Client, apiAddr string, id uint)
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions/%d", apiAddr, id),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressDefinitions, id),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -80,7 +80,7 @@ func GetWordpressDefinitionsByQueryString(apiClient *http.Client, apiAddr string
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions?%s", apiAddr, queryString),
+		fmt.Sprintf("%s%s?%s", apiAddr, v0.PathWordpressDefinitions, queryString),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -110,7 +110,7 @@ func GetWordpressDefinitionByName(apiClient *http.Client, apiAddr, name string) 
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions?name=%s", apiAddr, name),
+		fmt.Sprintf("%s%s?name=%s", apiAddr, v0.PathWordpressDefinitions, name),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -151,7 +151,7 @@ func CreateWordpressDefinition(apiClient *http.Client, apiAddr string, wordpress
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions", apiAddr),
+		fmt.Sprintf("%s%s", apiAddr, v0.PathWordpressDefinitions),
 		http.MethodPost,
 		bytes.NewBuffer(jsonWordpressDefinition),
 		map[string]string{},
@@ -193,7 +193,7 @@ func UpdateWordpressDefinition(apiClient *http.Client, apiAddr string, wordpress
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions/%d", apiAddr, wordpressDefinitionID),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressDefinitions, wordpressDefinitionID),
 		http.MethodPatch,
 		bytes.NewBuffer(jsonWordpressDefinition),
 		map[string]string{},
@@ -224,7 +224,7 @@ func DeleteWordpressDefinition(apiClient *http.Client, apiAddr string, id uint) 
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-definitions/%d", apiAddr, id),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressDefinitions, id),
 		http.MethodDelete,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -255,7 +255,7 @@ func GetWordpressInstances(apiClient *http.Client, apiAddr string) (*[]v0.Wordpr
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances", apiAddr),
+		fmt.Sprintf("%s%s", apiAddr, v0.PathWordpressInstances),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -285,7 +285,7 @@ func GetWordpressInstanceByID(apiClient *http.Client, apiAddr string, id uint) (
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances/%d", apiAddr, id),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressInstances, id),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -315,7 +315,7 @@ func GetWordpressInstancesByQueryString(apiClient *http.Client, apiAddr string, 
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances?%s", apiAddr, queryString),
+		fmt.Sprintf("%s%s?%s", apiAddr, v0.PathWordpressInstances, queryString),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -345,7 +345,7 @@ func GetWordpressInstanceByName(apiClient *http.Client, apiAddr, name string) (*
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances?name=%s", apiAddr, name),
+		fmt.Sprintf("%s%s?name=%s", apiAddr, v0.PathWordpressInstances, name),
 		http.MethodGet,
 		new(bytes.Buffer),
 		map[string]string{},
@@ -386,7 +386,7 @@ func CreateWordpressInstance(apiClient *http.Client, apiAddr string, wordpressIn
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances", apiAddr),
+		fmt.Sprintf("%s%s", apiAddr, v0.PathWordpressInstances),
 		http.MethodPost,
 		bytes.NewBuffer(jsonWordpressInstance),
 		map[string]string{},
@@ -428,7 +428,7 @@ func UpdateWordpressInstance(apiClient *http.Client, apiAddr string, wordpressIn
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances/%d", apiAddr, wordpressInstanceID),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressInstances, wordpressInstanceID),
 		http.MethodPatch,
 		bytes.NewBuffer(jsonWordpressInstance),
 		map[string]string{},
@@ -459,7 +459,7 @@ func DeleteWordpressInstance(apiClient *http.Client, apiAddr string, id uint) (*
 
 	response, err := tpclient_lib.GetResponse(
 		apiClient,
-		fmt.Sprintf("%s/v0/wordpress-instances/%d", apiAddr, id),
+		fmt.Sprintf("%s%s/%d", apiAddr, v0.PathWordpressInstances, id),
 		http.MethodDelete,
 		new(bytes.Buffer),
 		map[string]string{},

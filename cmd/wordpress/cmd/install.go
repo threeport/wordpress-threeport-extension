@@ -4,6 +4,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	cobra "github.com/spf13/cobra"
 	tptctl_cmd "github.com/threeport/threeport/cmd/tptctl/cmd"
 	cli "github.com/threeport/threeport/pkg/cli/v0"
@@ -11,7 +13,6 @@ import (
 	config "github.com/threeport/threeport/pkg/config/v0"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
 	installer "github.com/threeport/wordpress-threeport-extension/pkg/installer/v0"
-	"os"
 )
 
 // installCmd represents the install command
@@ -72,6 +73,15 @@ var installCmd = &cobra.Command{
 		// install extension
 		if err := installer.InstallWordpressExtension(); err != nil {
 			cli.Error("failed to install Wordpress extension", err)
+			os.Exit(1)
+		}
+
+		// register extension with Threeport API
+		if err := installer.RegisterWordpressExtension(
+			apiClient,
+			apiEndpoint,
+		); err != nil {
+			cli.Error("failed to register Wordpress extension with Threeport API", err)
 			os.Exit(1)
 		}
 

@@ -10,7 +10,7 @@ import (
 
 // WordpressDefinitionRoutes sets up all routes for the WordpressDefinition handlers.
 func WordpressDefinitionRoutes(e *echo.Echo, h *handlers.Handler) {
-	e.GET("/wordpress-definitions/versions", h.GetWordpressDefinitionVersions)
+	e.GET(v0.PathWordpressDefinitionVersions, h.GetWordpressDefinitionVersions)
 
 	e.POST(v0.PathWordpressDefinitions, h.AddWordpressDefinition)
 	e.GET(v0.PathWordpressDefinitions, h.GetWordpressDefinitions)
@@ -22,7 +22,7 @@ func WordpressDefinitionRoutes(e *echo.Echo, h *handlers.Handler) {
 
 // WordpressInstanceRoutes sets up all routes for the WordpressInstance handlers.
 func WordpressInstanceRoutes(e *echo.Echo, h *handlers.Handler) {
-	e.GET("/wordpress-instances/versions", h.GetWordpressInstanceVersions)
+	e.GET(v0.PathWordpressInstanceVersions, h.GetWordpressInstanceVersions)
 
 	e.POST(v0.PathWordpressInstances, h.AddWordpressInstance)
 	e.GET(v0.PathWordpressInstances, h.GetWordpressInstances)

@@ -13,8 +13,10 @@ const (
 	ObjectTypeWordpressDefinition string = "WordpressDefinition"
 	ObjectTypeWordpressInstance   string = "WordpressInstance"
 
-	PathWordpressDefinitions = "/v0/wordpress-definitions"
-	PathWordpressInstances   = "/v0/wordpress-instances"
+	PathWordpressDefinitionVersions = "/lander2k2-com/wordpress-definitions/versions"
+	PathWordpressDefinitions        = "/lander2k2-com/v0/wordpress-definitions"
+	PathWordpressInstanceVersions   = "/lander2k2-com/wordpress-instances/versions"
+	PathWordpressInstances          = "/lander2k2-com/v0/wordpress-instances"
 )
 
 // NotificationPayload returns the notification payload that is delivered to the

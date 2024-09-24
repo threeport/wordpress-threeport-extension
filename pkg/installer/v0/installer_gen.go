@@ -5,13 +5,18 @@ package v0
 import (
 	"context"
 	"fmt"
+	tp_api "github.com/threeport/threeport/pkg/api/v0"
+	tp_client "github.com/threeport/threeport/pkg/client/v0"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
+	util "github.com/threeport/threeport/pkg/util/v0"
+	api_v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 	errors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	dynamic "k8s.io/client-go/dynamic"
+	"net/http"
 )
 
 const (
@@ -19,7 +24,8 @@ const (
 	DbInitLocation            = "/etc/threeport/db-create"
 	defaultNamespace          = "threeport-wordpress"
 	defaultThreeportNamespace = "threeport-control-plane"
-	natsLabelSelector         = "app.kubernetes.io/name=nats"
+	apiServerDeployName       = "threeport-wordpress-api-server"
+	extensionName             = "lander2k2.com/wordpress-extension-api"
 )
 
 // Installer contains the values needed for an extension installation.
@@ -141,20 +147,20 @@ func (i *Installer) InstallWordpressExtension() error {
 		return fmt.Errorf("failed to create/update wordpress DB initialization configmap: %w", err)
 	}
 
-	// install wordpress API server
+	// install wordpress API server deployment
 	var wordpressApiDeploy = &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
 			"metadata": map[string]interface{}{
-				"name":      "threeport-wordpress-api-server",
+				"name":      apiServerDeployName,
 				"namespace": i.ExtensionNamespace,
 			},
 			"spec": map[string]interface{}{
 				"replicas": 1,
 				"selector": map[string]interface{}{
 					"matchLabels": map[string]interface{}{
-						"app.kubernetes.io/name": "threeport-wordpress-api-server",
+						"app.kubernetes.io/name": apiServerDeployName,
 					},
 				},
 				"strategy": map[string]interface{}{
@@ -168,7 +174,7 @@ func (i *Installer) InstallWordpressExtension() error {
 					"metadata": map[string]interface{}{
 						"creationTimestamp": nil,
 						"labels": map[string]interface{}{
-							"app.kubernetes.io/name": "threeport-wordpress-api-server",
+							"app.kubernetes.io/name": apiServerDeployName,
 						},
 					},
 					"spec": map[string]interface{}{
@@ -306,6 +312,37 @@ func (i *Installer) InstallWordpressExtension() error {
 
 	if _, err := kube.CreateOrUpdateResource(wordpressApiDeploy, i.KubeClient, *i.KubeRestMapper); err != nil {
 		return fmt.Errorf("failed to create/update wordpress API deployment: %w", err)
+	}
+
+	// install wordpress API server service
+	var wordpressApiService = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					"app.kubernetes.io/name": apiServerDeployName,
+				},
+				"name":      apiServerDeployName,
+				"namespace": i.ExtensionNamespace,
+			},
+			"spec": map[string]interface{}{
+				"ports": []interface{}{
+					map[string]interface{}{
+						"name":       "http",
+						"port":       80,
+						"protocol":   "TCP",
+						"targetPort": 1323,
+					},
+				},
+				"selector": map[string]interface{}{
+					"app.kubernetes.io/name": apiServerDeployName,
+				},
+			},
+		},
+	}
+	if _, err := kube.CreateOrUpdateResource(wordpressApiService, i.KubeClient, *i.KubeRestMapper); err != nil {
+		return fmt.Errorf("failed to create/updated wordpress API service: %w", err)
 	}
 
 	// install wordpress controller
@@ -449,6 +486,59 @@ func copySecret(
 	_, err = targetSecretResource.Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create/update Secret in namespace '%s': %w", targetNamespace, err)
+	}
+
+	return nil
+}
+
+// RegisterWordpressExtension calls the Threeport API to register the extension
+// API so that extension object requests are proxied to the Wordpress extension
+// API.
+func (i *Installer) RegisterWordpressExtension(
+	apiClient *http.Client,
+	apiAddr string,
+) error {
+	// check to see if extension is already registered
+	var existingExtApi *tp_api.ExtensionApi
+	existingExtApi, _ = tp_client.GetExtensionApiByName(apiClient, apiAddr, extensionName)
+	if existingExtApi.ID == nil {
+		// register the extension in the Threeport API
+		extensionApi := tp_api.ExtensionApi{
+			Endpoint: util.Ptr(fmt.Sprintf("%s.%s.svc.cluster.local", apiServerDeployName, defaultNamespace)),
+			Name:     util.Ptr(extensionName),
+		}
+		createdExtApi, err := tp_client.CreateExtensionApi(apiClient, apiAddr, &extensionApi)
+		if err != nil {
+			return fmt.Errorf("failed to create extension API object in Threeport API: %w", err)
+		}
+		existingExtApi = createdExtApi
+	}
+
+	// add all the paths to the registered extension if they don't already exist
+	allRoutePaths := []string{
+		api_v0.PathWordpressDefinitionVersions,
+		api_v0.PathWordpressDefinitions,
+		api_v0.PathWordpressInstanceVersions,
+		api_v0.PathWordpressInstances,
+	}
+	for _, path := range allRoutePaths {
+		// check to see if route path exists
+		query := fmt.Sprintf("path=%s&extensionapiid=%d", path, *existingExtApi.ID)
+		existingRoutes, err := tp_client.GetExtensionApiRoutesByQueryString(apiClient, apiAddr, query)
+		if err != nil {
+			return fmt.Errorf("failed to check for existing route path %s", path, err)
+		}
+		if len(*existingRoutes) == 0 {
+			// route path doesn't exist - create it
+			route := tp_api.ExtensionApiRoute{
+				ExtensionApiID: existingExtApi.ID,
+				Path:           &path,
+			}
+			_, err := tp_client.CreateExtensionApiRoute(apiClient, apiAddr, &route)
+			if err != nil {
+				return fmt.Errorf("failed to create route with path %s in Threeport API: %w", path, err)
+			}
+		}
 	}
 
 	return nil

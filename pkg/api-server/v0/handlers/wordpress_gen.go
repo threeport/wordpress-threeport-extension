@@ -25,7 +25,7 @@ import (
 // @ID wordpressDefinition-get-versions
 // @Produce json
 // @Success 200 {object} tpapiserver_lib.ApiObjectVersions "OK"
-// @Router /wordpress-definitions/versions [GET]
+// @Router /lander2k2-com/wordpress-definitions/versions [GET]
 func (h Handler) GetWordpressDefinitionVersions(c echo.Context) error {
 	return c.JSON(http.StatusOK, tpapiserver_lib.ObjectVersions[string(api_v0.ObjectTypeWordpressDefinition)])
 }
@@ -39,7 +39,7 @@ func (h Handler) GetWordpressDefinitionVersions(c echo.Context) error {
 // @Success 201 {object} v0.Response "Created"
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions [POST]
+// @Router /lander2k2-com/v0/wordpress-definitions [POST]
 func (h Handler) AddWordpressDefinition(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	var wordpressDefinition api_v0.WordpressDefinition
@@ -108,7 +108,7 @@ func (h Handler) AddWordpressDefinition(c echo.Context) error {
 // @Success 200 {object} v0.Response "OK"
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions [GET]
+// @Router /lander2k2-com/v0/wordpress-definitions [GET]
 func (h Handler) GetWordpressDefinitions(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	params, err := c.(*tpapiserver_lib.CustomContext).GetPaginationParams()
@@ -148,7 +148,7 @@ func (h Handler) GetWordpressDefinitions(c echo.Context) error {
 // @Success 200 {object} v0.Response "OK"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions/{id} [GET]
+// @Router /lander2k2-com/v0/wordpress-definitions/{id} [GET]
 func (h Handler) GetWordpressDefinition(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	wordpressDefinitionID := c.Param("id")
@@ -183,7 +183,7 @@ func (h Handler) GetWordpressDefinition(c echo.Context) error {
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions/{id} [PATCH]
+// @Router /lander2k2-com/v0/wordpress-definitions/{id} [PATCH]
 func (h Handler) UpdateWordpressDefinition(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	wordpressDefinitionID := c.Param("id")
@@ -248,7 +248,7 @@ func (h Handler) UpdateWordpressDefinition(c echo.Context) error {
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions/{id} [PUT]
+// @Router /lander2k2-com/v0/wordpress-definitions/{id} [PUT]
 func (h Handler) ReplaceWordpressDefinition(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	wordpressDefinitionID := c.Param("id")
@@ -308,7 +308,7 @@ func (h Handler) ReplaceWordpressDefinition(c echo.Context) error {
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 409 {object} v0.Response "Conflict"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-definitions/{id} [DELETE]
+// @Router /lander2k2-com/v0/wordpress-definitions/{id} [DELETE]
 func (h Handler) DeleteWordpressDefinition(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressDefinition
 	wordpressDefinitionID := c.Param("id")
@@ -385,7 +385,7 @@ func (h Handler) DeleteWordpressDefinition(c echo.Context) error {
 // @ID wordpressInstance-get-versions
 // @Produce json
 // @Success 200 {object} tpapiserver_lib.ApiObjectVersions "OK"
-// @Router /wordpress-instances/versions [GET]
+// @Router /lander2k2-com/wordpress-instances/versions [GET]
 func (h Handler) GetWordpressInstanceVersions(c echo.Context) error {
 	return c.JSON(http.StatusOK, tpapiserver_lib.ObjectVersions[string(api_v0.ObjectTypeWordpressInstance)])
 }
@@ -399,7 +399,7 @@ func (h Handler) GetWordpressInstanceVersions(c echo.Context) error {
 // @Success 201 {object} v0.Response "Created"
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances [POST]
+// @Router /lander2k2-com/v0/wordpress-instances [POST]
 func (h Handler) AddWordpressInstance(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	var wordpressInstance api_v0.WordpressInstance
@@ -468,7 +468,7 @@ func (h Handler) AddWordpressInstance(c echo.Context) error {
 // @Success 200 {object} v0.Response "OK"
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances [GET]
+// @Router /lander2k2-com/v0/wordpress-instances [GET]
 func (h Handler) GetWordpressInstances(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	params, err := c.(*tpapiserver_lib.CustomContext).GetPaginationParams()
@@ -508,7 +508,7 @@ func (h Handler) GetWordpressInstances(c echo.Context) error {
 // @Success 200 {object} v0.Response "OK"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances/{id} [GET]
+// @Router /lander2k2-com/v0/wordpress-instances/{id} [GET]
 func (h Handler) GetWordpressInstance(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	wordpressInstanceID := c.Param("id")
@@ -543,7 +543,7 @@ func (h Handler) GetWordpressInstance(c echo.Context) error {
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances/{id} [PATCH]
+// @Router /lander2k2-com/v0/wordpress-instances/{id} [PATCH]
 func (h Handler) UpdateWordpressInstance(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	wordpressInstanceID := c.Param("id")
@@ -608,7 +608,7 @@ func (h Handler) UpdateWordpressInstance(c echo.Context) error {
 // @Failure 400 {object} v0.Response "Bad Request"
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances/{id} [PUT]
+// @Router /lander2k2-com/v0/wordpress-instances/{id} [PUT]
 func (h Handler) ReplaceWordpressInstance(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	wordpressInstanceID := c.Param("id")
@@ -668,7 +668,7 @@ func (h Handler) ReplaceWordpressInstance(c echo.Context) error {
 // @Failure 404 {object} v0.Response "Not Found"
 // @Failure 409 {object} v0.Response "Conflict"
 // @Failure 500 {object} v0.Response "Internal Server Error"
-// @Router /v0/wordpress-instances/{id} [DELETE]
+// @Router /lander2k2-com/v0/wordpress-instances/{id} [DELETE]
 func (h Handler) DeleteWordpressInstance(c echo.Context) error {
 	objectType := api_v0.ObjectTypeWordpressInstance
 	wordpressInstanceID := c.Param("id")
