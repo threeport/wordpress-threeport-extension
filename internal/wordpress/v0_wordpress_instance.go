@@ -3,8 +3,13 @@
 package wordpress
 
 import (
+	"fmt"
+
 	logr "github.com/go-logr/logr"
+	tpapi "github.com/threeport/threeport/pkg/api/v0"
+	tpclient "github.com/threeport/threeport/pkg/client/v0"
 	controller "github.com/threeport/threeport/pkg/controller/v0"
+
 	v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 )
 
@@ -15,6 +20,59 @@ func v0WordpressInstanceCreated(
 	wordpressInstance *v0.WordpressInstance,
 	log *logr.Logger,
 ) (int64, error) {
+	// get attached Kubernetes runtime instance ID
+	kubernetesRuntimeInstanceId, err := tpclient.GetObjectIdByAttachedObject(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeKubernetesRuntimeInstance,
+		v0.ObjectTypeWordpressInstance,
+		*wordpressInstance.ID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get Kubernetes runtime instance by attachment: %w", err)
+	}
+
+	// get workload definition attached to wordpress definition
+	workloadDefinitionId, err := tpclient.GetObjectIdByAttachedObject(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadDefinition,
+		v0.ObjectTypeWordpressDefinition,
+		*wordpressInstance.WordpressDefinitionID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get workload definition by attachment: %w", err)
+	}
+
+	// create workload instance
+	workloadInstance := tpapi.WorkloadInstance{
+		Instance: tpapi.Instance{
+			Name: wordpressInstance.Name,
+		},
+		KubernetesRuntimeInstanceID: kubernetesRuntimeInstanceId,
+		WorkloadDefinitionID:        workloadDefinitionId,
+	}
+	createdWorkloadInstance, err := tpclient.CreateWorkloadInstance(
+		r.APIClient,
+		r.APIServer,
+		&workloadInstance,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create workload instance: %w", err)
+	}
+
+	// establish attachment between wordpress instance and workload instance
+	if err := tpclient.EnsureAttachedObjectReferenceExists(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadInstance,
+		createdWorkloadInstance.ID,
+		v0.ObjectTypeWordpressInstance,
+		wordpressInstance.ID,
+	); err != nil {
+		return 0, fmt.Errorf("failed to attach wordpress instance to workload instance: %w", err)
+	}
+
 	return 0, nil
 }
 
@@ -35,5 +93,39 @@ func v0WordpressInstanceDeleted(
 	wordpressInstance *v0.WordpressInstance,
 	log *logr.Logger,
 ) (int64, error) {
+	// get attached workload instance
+	workloadInstanceId, err := tpclient.GetObjectIdByAttachedObject(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadInstance,
+		v0.ObjectTypeWordpressInstance,
+		*wordpressInstance.ID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find attached workload instance: %w", err)
+	}
+
+	// delete workload instance
+	_, err = tpclient.DeleteWorkloadInstance(
+		r.APIClient,
+		r.APIServer,
+		*workloadInstanceId,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete workload instance: %w", err)
+	}
+
+	// remove workload instance attachment
+	if err := tpclient.EnsureAttachedObjectReferenceRemoved(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadInstance,
+		workloadInstanceId,
+		v0.ObjectTypeWordpressInstance,
+		wordpressInstance.ID,
+	); err != nil {
+		return 0, fmt.Errorf("failed to remove attachment to deleted workload instance: %w", err)
+	}
+
 	return 0, nil
 }

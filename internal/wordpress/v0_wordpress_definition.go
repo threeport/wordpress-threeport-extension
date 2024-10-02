@@ -3,8 +3,13 @@
 package wordpress
 
 import (
+	"fmt"
+
 	logr "github.com/go-logr/logr"
+	tpapi "github.com/threeport/threeport/pkg/api/v0"
+	tpclient "github.com/threeport/threeport/pkg/client/v0"
 	controller "github.com/threeport/threeport/pkg/controller/v0"
+
 	v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 )
 
@@ -15,6 +20,43 @@ func v0WordpressDefinitionCreated(
 	wordpressDefinition *v0.WordpressDefinition,
 	log *logr.Logger,
 ) (int64, error) {
+	// generate YAML manifest for wordpress app
+	yamlDoc, err := wordpressYaml(
+		*wordpressDefinition.Name,
+		*wordpressDefinition.Replicas,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate wordpress YAML manifest: %w", err)
+	}
+
+	// create wordpress workload definition
+	workloadDefinition := tpapi.WorkloadDefinition{
+		Definition: tpapi.Definition{
+			Name: wordpressDefinition.Name,
+		},
+		YAMLDocument: &yamlDoc,
+	}
+	createdWorkloadDefinition, err := tpclient.CreateWorkloadDefinition(
+		r.APIClient,
+		r.APIServer,
+		&workloadDefinition,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create Threeport workload definition: %w", err)
+	}
+
+	// establish attachment between wordpress definition and workload definition
+	if err := tpclient.EnsureAttachedObjectReferenceExists(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadDefinition,
+		createdWorkloadDefinition.ID,
+		v0.ObjectTypeWordpressDefinition,
+		wordpressDefinition.ID,
+	); err != nil {
+		return 0, fmt.Errorf("failed to attach wordpress definition to workload definition: %w", err)
+	}
+
 	return 0, nil
 }
 
@@ -35,5 +77,39 @@ func v0WordpressDefinitionDeleted(
 	wordpressDefinition *v0.WordpressDefinition,
 	log *logr.Logger,
 ) (int64, error) {
+	// get attached workload definition
+	workloadDefinitionId, err := tpclient.GetObjectIdByAttachedObject(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadDefinition,
+		v0.ObjectTypeWordpressDefinition,
+		*wordpressDefinition.ID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find attached workload definition: %w", err)
+	}
+
+	// delete workload definition
+	_, err = tpclient.DeleteWorkloadDefinition(
+		r.APIClient,
+		r.APIServer,
+		*workloadDefinitionId,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete workload definition: %w", err)
+	}
+
+	// remove workload definition attachment
+	if err := tpclient.EnsureAttachedObjectReferenceRemoved(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeWorkloadDefinition,
+		workloadDefinitionId,
+		v0.ObjectTypeWordpressDefinition,
+		wordpressDefinition.ID,
+	); err != nil {
+		return 0, fmt.Errorf("failed to remove attachment to deleted workload definition: %w", err)
+	}
+
 	return 0, nil
 }

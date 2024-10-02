@@ -1,0 +1,7 @@
+WordpressInstance:
+  Name: sample-1
+  WordpressDefinition:
+    Name: sample-0
+  KubernetesRuntimeInstance:
+    Name: threeport-dev-0
+

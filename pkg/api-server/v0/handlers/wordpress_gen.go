@@ -45,7 +45,7 @@ func (h Handler) AddWordpressDefinition(c echo.Context) error {
 	var wordpressDefinition api_v0.WordpressDefinition
 
 	// check for empty payload, unsupported fields, GORM Model fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, false, objectType, wordpressDefinition); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, false, objectType, wordpressDefinition); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 
@@ -196,7 +196,7 @@ func (h Handler) UpdateWordpressDefinition(c echo.Context) error {
 	}
 
 	// check for empty payload, invalid or unsupported fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, true, objectType, existingWordpressDefinition); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, true, objectType, existingWordpressDefinition); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 
@@ -261,7 +261,7 @@ func (h Handler) ReplaceWordpressDefinition(c echo.Context) error {
 	}
 
 	// check for empty payload, invalid or unsupported fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, true, objectType, existingWordpressDefinition); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, true, objectType, existingWordpressDefinition); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 
@@ -405,7 +405,7 @@ func (h Handler) AddWordpressInstance(c echo.Context) error {
 	var wordpressInstance api_v0.WordpressInstance
 
 	// check for empty payload, unsupported fields, GORM Model fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, false, objectType, wordpressInstance); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, false, objectType, wordpressInstance); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 
@@ -556,7 +556,7 @@ func (h Handler) UpdateWordpressInstance(c echo.Context) error {
 	}
 
 	// check for empty payload, invalid or unsupported fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, true, objectType, existingWordpressInstance); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, true, objectType, existingWordpressInstance); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 
@@ -621,7 +621,7 @@ func (h Handler) ReplaceWordpressInstance(c echo.Context) error {
 	}
 
 	// check for empty payload, invalid or unsupported fields, optional associations, etc.
-	if id, err := tpapiserver_lib.PayloadCheck(c, true, objectType, existingWordpressInstance); err != nil {
+	if id, err := tpapiserver_lib.PayloadCheck(c, true, true, objectType, existingWordpressInstance); err != nil {
 		return tpapiserver_lib.ResponseStatusErr(id, c, nil, errors.New(err.Error()), objectType)
 	}
 

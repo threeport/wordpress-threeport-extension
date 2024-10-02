@@ -189,7 +189,7 @@ var DeleteWordpressDefinitionCmd = &cobra.Command{
 			} else {
 				wordpressDefinitionConfig = config_v0.WordpressDefinitionConfig{
 					WordpressDefinition: config_v0.WordpressDefinitionValues{
-						Name: deleteWordpressDefinitionName,
+						Name: &deleteWordpressDefinitionName,
 					},
 				}
 			}
@@ -287,7 +287,7 @@ var DescribeWordpressDefinitionCmd = &cobra.Command{
 			} else {
 				wordpressDefinitionConfig = config_v0.WordpressDefinitionConfig{
 					WordpressDefinition: config_v0.WordpressDefinitionValues{
-						Name: describeWordpressDefinitionName,
+						Name: &describeWordpressDefinitionName,
 					},
 				}
 			}
@@ -296,7 +296,7 @@ var DescribeWordpressDefinitionCmd = &cobra.Command{
 			obj, err := client_v0.GetWordpressDefinitionByName(
 				apiClient,
 				apiEndpoint,
-				wordpressDefinitionConfig.WordpressDefinition.Name,
+				*wordpressDefinitionConfig.WordpressDefinition.Name,
 			)
 			if err != nil {
 				cli.Error("failed to retrieve wordpress definition details", err)
@@ -523,7 +523,7 @@ var CreateWordpressCmd = &cobra.Command{
 
 			cli.Info(fmt.Sprintf("wordpress definition %s created", *createdWordpressDefinition.Name))
 			cli.Info(fmt.Sprintf("wordpress instance %s created", *createdWordpressInstance.Name))
-			cli.Complete(fmt.Sprintf("wordpress %s created", wordpressConfig.Wordpress.Name))
+			cli.Complete(fmt.Sprintf("wordpress %s created", *wordpressConfig.Wordpress.Name))
 		default:
 			cli.Error("", errors.New("unrecognized object version"))
 			os.Exit(1)
@@ -595,9 +595,9 @@ var DeleteWordpressCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			cli.Info(fmt.Sprintf("wordpress definition %s deleted", wordpress.Name))
-			cli.Info(fmt.Sprintf("wordpress instance %s deleted", wordpress.Name))
-			cli.Complete(fmt.Sprintf("wordpress %s deleted", wordpressConfig.Wordpress.Name))
+			cli.Info(fmt.Sprintf("wordpress definition %s deleted", *wordpress.Name))
+			cli.Info(fmt.Sprintf("wordpress instance %s deleted", *wordpress.Name))
+			cli.Complete(fmt.Sprintf("wordpress %s deleted", *wordpressConfig.Wordpress.Name))
 		default:
 			cli.Error("", errors.New("unrecognized object version"))
 			os.Exit(1)
@@ -794,7 +794,7 @@ var DeleteWordpressInstanceCmd = &cobra.Command{
 			} else {
 				wordpressInstanceConfig = config_v0.WordpressInstanceConfig{
 					WordpressInstance: config_v0.WordpressInstanceValues{
-						Name: deleteWordpressInstanceName,
+						Name: &deleteWordpressInstanceName,
 					},
 				}
 			}
@@ -892,7 +892,7 @@ var DescribeWordpressInstanceCmd = &cobra.Command{
 			} else {
 				wordpressInstanceConfig = config_v0.WordpressInstanceConfig{
 					WordpressInstance: config_v0.WordpressInstanceValues{
-						Name: describeWordpressInstanceName,
+						Name: &describeWordpressInstanceName,
 					},
 				}
 			}
@@ -901,7 +901,7 @@ var DescribeWordpressInstanceCmd = &cobra.Command{
 			obj, err := client_v0.GetWordpressInstanceByName(
 				apiClient,
 				apiEndpoint,
-				wordpressInstanceConfig.WordpressInstance.Name,
+				*wordpressInstanceConfig.WordpressInstance.Name,
 			)
 			if err != nil {
 				cli.Error("failed to retrieve wordpress instance details", err)

@@ -3,12 +3,17 @@
 package v0
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+
 	tpapi_v0 "github.com/threeport/threeport/pkg/api/v0"
+	tpclient "github.com/threeport/threeport/pkg/client/v0"
+	tpconfig "github.com/threeport/threeport/pkg/config/v0"
 	util "github.com/threeport/threeport/pkg/util/v0"
+
 	api_v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 	client_v0 "github.com/threeport/wordpress-threeport-extension/pkg/client/v0"
-	"net/http"
 )
 
 // WordpressConfig contains the config for a wordpress which is an abstraction
@@ -20,7 +25,10 @@ type WordpressConfig struct {
 // WordpressValues contains the attributes needed to manage a wordpress
 // definition and wordpress instance with a single operation.
 type WordpressValues struct {
-	Name string `yaml:"Name"`
+	Name                      *string                                   `yaml:"Name"`
+	Replicas                  *int                                      `yaml:"Replicas"`
+	ManagedDatabase           *bool                                     `yaml:"ManagedDatabase"`
+	KubernetesRuntimeInstance *tpconfig.KubernetesRuntimeInstanceValues `yaml:"KubernetesRuntimeInstance"`
 }
 
 // Create creates a wordpress definition and instance in the Threeport API.
@@ -38,7 +46,7 @@ func (w *WordpressValues) Create(
 	if err := operations.Create(); err != nil {
 		return nil, nil, fmt.Errorf(
 			"failed to execute create operations for wordpress defined instance with name %s: %w",
-			w.Name,
+			*w.Name,
 			err,
 		)
 	}
@@ -61,7 +69,7 @@ func (w *WordpressValues) Delete(
 	if err := operations.Delete(); err != nil {
 		return nil, nil, fmt.Errorf(
 			"failed to execute delete operations for wordpress defined instance with name %s: %w",
-			w.Name,
+			*w.Name,
 			err,
 		)
 	}
@@ -89,7 +97,7 @@ func (w *WordpressValues) GetOperations(
 		Create: func() error {
 			wordpressDefinition, err := wordpressDefinitionValues.Create(apiClient, apiEndpoint)
 			if err != nil {
-				return fmt.Errorf("failed to create wordpress definition with name %s: %w", w.Name, err)
+				return fmt.Errorf("failed to create wordpress definition with name %s: %w", *w.Name, err)
 			}
 			createdWordpressDefinition = *wordpressDefinition
 			return nil
@@ -97,7 +105,7 @@ func (w *WordpressValues) GetOperations(
 		Delete: func() error {
 			_, err = wordpressDefinitionValues.Delete(apiClient, apiEndpoint)
 			if err != nil {
-				return fmt.Errorf("failed to delete wordpress definition with name %s: %w", w.Name, err)
+				return fmt.Errorf("failed to delete wordpress definition with name %s: %w", *w.Name, err)
 			}
 			return nil
 		},
@@ -107,12 +115,15 @@ func (w *WordpressValues) GetOperations(
 	// add wordpress instance operation
 	wordpressInstanceValues := WordpressInstanceValues{
 		Name: w.Name,
+		WordpressDefinition: WordpressDefinitionValues{
+			Name: w.Name,
+		},
 	}
 	operations.AppendOperation(util.Operation{
 		Create: func() error {
 			wordpressInstance, err := wordpressInstanceValues.Create(apiClient, apiEndpoint)
 			if err != nil {
-				return fmt.Errorf("failed to create wordpress instance with name %s: %w", w.Name, err)
+				return fmt.Errorf("failed to create wordpress instance with name %s: %w", *w.Name, err)
 			}
 			createdWordpressInstance = *wordpressInstance
 			return nil
@@ -120,7 +131,7 @@ func (w *WordpressValues) GetOperations(
 		Delete: func() error {
 			_, err = wordpressInstanceValues.Delete(apiClient, apiEndpoint)
 			if err != nil {
-				return fmt.Errorf("failed to delete wordpress instance with name %s: %w", w.Name, err)
+				return fmt.Errorf("failed to delete wordpress instance with name %s: %w", *w.Name, err)
 			}
 			return nil
 		},
@@ -138,7 +149,9 @@ type WordpressDefinitionConfig struct {
 // WordpressDefinitionValues contains the attributes for the wordpress definition
 // config abstraction.
 type WordpressDefinitionValues struct {
-	Name string `yaml:"Name"`
+	Name            *string `yaml:"Name"`
+	Replicas        *int    `yaml:"Replicas"`
+	ManagedDatabase *bool   `yaml:"ManagedDatabase"`
 }
 
 // Create creates a wordpress definition in the Threeport API.
@@ -152,8 +165,14 @@ func (w *WordpressDefinitionValues) Create(
 	// construct wordpress definition object
 	wordpressDefinition := api_v0.WordpressDefinition{
 		Definition: tpapi_v0.Definition{
-			Name: &w.Name,
+			Name: w.Name,
 		},
+	}
+	if w.Replicas != nil {
+		wordpressDefinition.Replicas = w.Replicas
+	}
+	if w.ManagedDatabase != nil {
+		wordpressDefinition.ManagedDatabase = w.ManagedDatabase
 	}
 
 	// create wordpress definition
@@ -178,10 +197,10 @@ func (w *WordpressDefinitionValues) Delete(
 	wordpressDefinition, err := client_v0.GetWordpressDefinitionByName(
 		apiClient,
 		apiEndpoint,
-		w.Name,
+		*w.Name,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wordpress definition with name %s: %w", w.Name, err)
+		return nil, fmt.Errorf("failed to find wordpress definition with name %s: %w", *w.Name, err)
 	}
 
 	// delete wordpress definition
@@ -205,7 +224,9 @@ type WordpressInstanceConfig struct {
 // WordpressInstanceValues contains the attributes for the wordpress instance
 // config abstraction.
 type WordpressInstanceValues struct {
-	Name string `yaml:"Name"`
+	Name                      *string                                   `yaml:"Name"`
+	WordpressDefinition       WordpressDefinitionValues                 `yaml:"WordpressDefinition"`
+	KubernetesRuntimeInstance *tpconfig.KubernetesRuntimeInstanceValues `yaml:"KubernetesRuntimeInstance"`
 }
 
 // Create creates a wordpress instance in the Threeport API.
@@ -216,11 +237,36 @@ func (w *WordpressInstanceValues) Create(
 	// validate config
 	// TODO
 
+	// get kubernetes runtime instance API object
+	kubernetesRuntimeInstance, err := tpconfig.SetKubernetesRuntimeInstanceForConfig(
+		w.KubernetesRuntimeInstance,
+		apiClient,
+		apiEndpoint,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set kubernetes runtime instance: %w", err)
+	}
+
+	// get wordpress definition by name
+	wordpressDefinition, err := client_v0.GetWordpressDefinitionByName(
+		apiClient,
+		apiEndpoint,
+		*w.WordpressDefinition.Name,
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get wordpress definition by name %s: %w",
+			w.WordpressDefinition.Name,
+			err,
+		)
+	}
+
 	// construct wordpress instance object
 	wordpressInstance := api_v0.WordpressInstance{
 		Instance: tpapi_v0.Instance{
-			Name: &w.Name,
+			Name: w.Name,
 		},
+		WordpressDefinitionID: wordpressDefinition.ID,
 	}
 
 	// create wordpress instance
@@ -231,6 +277,18 @@ func (w *WordpressInstanceValues) Create(
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wordpress instance in threeport API: %w", err)
+	}
+
+	// create attached object reference to kubernetes runtime instance
+	if err := tpclient.EnsureAttachedObjectReferenceExists(
+		apiClient,
+		apiEndpoint,
+		tpapi_v0.ObjectTypeKubernetesRuntimeInstance,
+		kubernetesRuntimeInstance.ID,
+		api_v0.ObjectTypeWordpressInstance,
+		createdWordpressInstance.ID,
+	); err != nil {
+		return nil, fmt.Errorf("failed to attach wordpress instance to kubernetes runtime instance: %w", err)
 	}
 
 	return createdWordpressInstance, nil
@@ -245,10 +303,10 @@ func (w *WordpressInstanceValues) Delete(
 	wordpressInstance, err := client_v0.GetWordpressInstanceByName(
 		apiClient,
 		apiEndpoint,
-		w.Name,
+		*w.Name,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wordpress instance with name %s: %w", w.Name, err)
+		return nil, fmt.Errorf("failed to find wordpress instance with name %s: %w", *w.Name, err)
 	}
 
 	// delete wordpress instance
@@ -259,6 +317,36 @@ func (w *WordpressInstanceValues) Delete(
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete wordpress instance from Threeport API: %w", err)
+	}
+
+	// wait for workload instance to be deleted
+	util.Retry(60, 1, func() error {
+		if _, err := client_v0.GetWordpressInstanceByName(apiClient, apiEndpoint, *w.Name); err == nil {
+			return errors.New("workload instance not deleted")
+		}
+		return nil
+	})
+
+	// get kubernetes runtime instance API object
+	kubernetesRuntimeInstance, err := tpconfig.SetKubernetesRuntimeInstanceForConfig(
+		w.KubernetesRuntimeInstance,
+		apiClient,
+		apiEndpoint,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set kubernetes runtime instance: %w", err)
+	}
+
+	// remove attached object reference to kubernetes runtime instance
+	if err := tpclient.EnsureAttachedObjectReferenceRemoved(
+		apiClient,
+		apiEndpoint,
+		tpapi_v0.ObjectTypeKubernetesRuntimeInstance,
+		kubernetesRuntimeInstance.ID,
+		api_v0.ObjectTypeWordpressInstance,
+		deletedWordpressInstance.ID,
+	); err != nil {
+		return nil, fmt.Errorf("failed to remove wordpress instance attachment to kubernetes runtime instance: %w", err)
 	}
 
 	return deletedWordpressInstance, nil
