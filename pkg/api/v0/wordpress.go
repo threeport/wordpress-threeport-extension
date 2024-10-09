@@ -10,8 +10,12 @@ type WordpressDefinition struct {
 	tpapi_v0.Reconciliation `mapstructure:",squash"`
 	tpapi_v0.Definition     `mapstructure:",squash"`
 
+	// The environment type used to determine config settings for a wordpress
+	// definition.
+	Environment *string `json:"Environment,omitempty" query:"environment" gorm:"default:dev" validate:"optional"`
+
 	// The number of pod replicas to deploy for the WordPress app
-	Replicas *int `json:"Replicas,omitempty" query:"replicas" gorm:"default:2" validate:"optional"`
+	Replicas *int `json:"Replicas,omitempty" query:"replicas" validate:"optional"`
 
 	// If true, a cloud provider's managed database will be used for the
 	// WordPress DB.  If false, a containerized database will be deployed to
@@ -25,6 +29,10 @@ type WordpressInstance struct {
 	tpapi_v0.Common         `mapstructure:",squash" swaggerignore:"true"`
 	tpapi_v0.Reconciliation `mapstructure:",squash"`
 	tpapi_v0.Instance       `mapstructure:",squash"`
+
+	// When using a DomainName, the subdomain to use to reach the WordPress
+	// instance.
+	SubDomain *string `jaon:"SubDomain,omitempty" query:"subdomain" validate:"optional"`
 
 	WordpressDefinitionID *uint `gorm:"not null" json:"WordpressDefinitionID,omitempty" query:"wordpressdefinitionid" validate:"required"`
 }

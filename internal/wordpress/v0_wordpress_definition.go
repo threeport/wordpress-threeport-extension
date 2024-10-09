@@ -9,9 +9,12 @@ import (
 	tpapi "github.com/threeport/threeport/pkg/api/v0"
 	tpclient "github.com/threeport/threeport/pkg/client/v0"
 	controller "github.com/threeport/threeport/pkg/controller/v0"
+	util "github.com/threeport/threeport/pkg/util/v0"
 
 	v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 )
+
+const wordpressDbConnSecretName = "wordpress-db-conn"
 
 // v0WordpressDefinitionCreated performs reconciliation when a v0 WordpressDefinition
 // has been created.
@@ -20,29 +23,57 @@ func v0WordpressDefinitionCreated(
 	wordpressDefinition *v0.WordpressDefinition,
 	log *logr.Logger,
 ) (int64, error) {
+	// set wordpress deployment replicas
+	var wordpressReplicas int
+	if wordpressDefinition.Replicas != nil {
+		wordpressReplicas = *wordpressDefinition.Replicas
+	} else {
+		wordpressReplicas = setWordpressReplicasByEnv(*wordpressDefinition.Environment)
+	}
+
+	// set wordpress DB storage volume size
+	wordpressDbStorageGb := setWordpressDbStorage(*wordpressDefinition.Environment)
+
 	// generate YAML manifest for wordpress app
 	yamlDoc, err := wordpressYaml(
 		*wordpressDefinition.Name,
-		*wordpressDefinition.Replicas,
+		wordpressReplicas,
+		*wordpressDefinition.Environment,
+		*wordpressDefinition.ManagedDatabase,
+		wordpressDbStorageGb,
+		wordpressDbConnSecretName,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("failed to generate wordpress YAML manifest: %w", err)
 	}
 
-	// create wordpress workload definition
-	workloadDefinition := tpapi.WorkloadDefinition{
-		Definition: tpapi.Definition{
-			Name: wordpressDefinition.Name,
-		},
-		YAMLDocument: &yamlDoc,
-	}
-	createdWorkloadDefinition, err := tpclient.CreateWorkloadDefinition(
+	// create wordpress workload definition if it doesn't already exist
+	nameQuery := fmt.Sprintf("name=%s", *wordpressDefinition.Name)
+	existingWorkloadDefinitions, err := tpclient.GetWorkloadDefinitionsByQueryString(
 		r.APIClient,
 		r.APIServer,
-		&workloadDefinition,
+		nameQuery,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create Threeport workload definition: %w", err)
+		return 0, fmt.Errorf("failed to check for workload definitions with name %s: %w", *wordpressDefinition.Name, err)
+	}
+	var createdWorkloadDefinition *tpapi.WorkloadDefinition
+	if len(*existingWorkloadDefinitions) == 0 {
+		workloadDefinition := tpapi.WorkloadDefinition{
+			Definition: tpapi.Definition{
+				Name: wordpressDefinition.Name,
+			},
+			YAMLDocument: &yamlDoc,
+		}
+		createdWorkloadDef, err := tpclient.CreateWorkloadDefinition(
+			r.APIClient,
+			r.APIServer,
+			&workloadDefinition,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create Threeport workload definition: %w", err)
+		}
+		createdWorkloadDefinition = createdWorkloadDef
 	}
 
 	// establish attachment between wordpress definition and workload definition
@@ -55,6 +86,68 @@ func v0WordpressDefinitionCreated(
 		wordpressDefinition.ID,
 	); err != nil {
 		return 0, fmt.Errorf("failed to attach wordpress definition to workload definition: %w", err)
+	}
+
+	// create relational database definition if requested
+	if *wordpressDefinition.ManagedDatabase {
+		storageGb := setWordpressDbStorage(*wordpressDefinition.Environment)
+		var backupDays int
+		var machineSize string
+		switch *wordpressDefinition.Environment {
+		case "prod":
+			backupDays = 30
+			machineSize = "Large"
+		default:
+			backupDays = 0
+			machineSize = "XSmall"
+		}
+		// get AWS account ID
+		awsAccountId, err := tpclient.GetObjectIdByAttachedObject(
+			r.APIClient,
+			r.APIServer,
+			tpapi.ObjectTypeAwsAccount,
+			v0.ObjectTypeWordpressDefinition,
+			*wordpressDefinition.ID,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get attached AWS account ID: %w", err)
+		}
+		// construct relational database definition
+		awsRdsDefinition := tpapi.AwsRelationalDatabaseDefinition{
+			Definition: tpapi.Definition{
+				Name: wordpressDefinition.Name,
+			},
+			Engine:             util.Ptr("mariadb"),
+			EngineVersion:      util.Ptr("10.11"),
+			DatabaseName:       util.Ptr("wordpress"),
+			DatabasePort:       util.Ptr(3306),
+			BackupDays:         util.Ptr(backupDays),
+			StorageGb:          util.Ptr(storageGb),
+			MachineSize:        util.Ptr(machineSize),
+			WorkloadSecretName: util.Ptr(wordpressDbConnSecretName),
+			AwsAccountID:       awsAccountId,
+		}
+		// create releational database definition
+		createdAwsRdsDefinition, err := tpclient.CreateAwsRelationalDatabaseDefinition(
+			r.APIClient,
+			r.APIServer,
+			&awsRdsDefinition,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create AWS relational database definition: %w", err)
+		}
+		// establish attachment between wordpress definition and relational
+		// database definition
+		if err := tpclient.EnsureAttachedObjectReferenceExists(
+			r.APIClient,
+			r.APIServer,
+			tpapi.ObjectTypeAwsRelationalDatabaseDefinition,
+			createdAwsRdsDefinition.ID,
+			v0.ObjectTypeWordpressDefinition,
+			wordpressDefinition.ID,
+		); err != nil {
+			return 0, fmt.Errorf("failed to attach wordpress definition to AWS relational database definition: %w", err)
+		}
 	}
 
 	return 0, nil
@@ -111,5 +204,58 @@ func v0WordpressDefinitionDeleted(
 		return 0, fmt.Errorf("failed to remove attachment to deleted workload definition: %w", err)
 	}
 
+	// delete relational database definition if it exists
+	awsRdsDefinitionIds, err := tpclient.GetObjectIdsByAttachedObject(
+		r.APIClient,
+		r.APIServer,
+		tpapi.ObjectTypeAwsRelationalDatabaseDefinition,
+		v0.ObjectTypeWordpressDefinition,
+		*wordpressDefinition.ID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get attached AWS relational database definition IDs: %w", err)
+	}
+	for _, awsRdsDefinitionId := range awsRdsDefinitionIds {
+		_, err := tpclient.DeleteGatewayInstance(
+			r.APIClient,
+			r.APIServer,
+			*awsRdsDefinitionId,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to delete AWS relational database definition with ID %d: %w", *awsRdsDefinitionId, err)
+		}
+		if err := tpclient.EnsureAttachedObjectReferenceRemoved(
+			r.APIClient,
+			r.APIServer,
+			tpapi.ObjectTypeGatewayDefinition,
+			awsRdsDefinitionId,
+			v0.ObjectTypeWordpressDefinition,
+			wordpressDefinition.ID,
+		); err != nil {
+			return 0, fmt.Errorf("failed to remove wordpress definition attachment to deleted AWS relational database definition: %w", err)
+		}
+	}
+
 	return 0, nil
+}
+
+// setWordpressReplicasByEnv sets default replicas for the Wordpress deployment
+// based on the environment value.
+func setWordpressReplicasByEnv(env string) int {
+	switch env {
+	case "prod":
+		return 5
+	default:
+		return 2
+	}
+}
+
+// setWordpressDbStorage sets the database storage volume size.
+func setWordpressDbStorage(env string) int {
+	switch env {
+	case "prod":
+		return 100
+	default:
+		return 20
+	}
 }

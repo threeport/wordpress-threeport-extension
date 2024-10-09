@@ -1,0 +1,4 @@
+WordpressDefinition:
+  Name: sample-x
+  Replicas: 1
+

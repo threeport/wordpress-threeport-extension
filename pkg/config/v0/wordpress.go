@@ -149,9 +149,12 @@ type WordpressDefinitionConfig struct {
 // WordpressDefinitionValues contains the attributes for the wordpress definition
 // config abstraction.
 type WordpressDefinitionValues struct {
-	Name            *string `yaml:"Name"`
-	Replicas        *int    `yaml:"Replicas"`
-	ManagedDatabase *bool   `yaml:"ManagedDatabase"`
+	Name            *string                    `yaml:"Name"`
+	Environment     *string                    `yaml:"Environment"`
+	Replicas        *int                       `yaml:"Replicas"`
+	ManagedDatabase *bool                      `yaml:"ManagedDatabase"`
+	DomainName      *tpconfig.DomainNameValues `yaml:"DomainName"`
+	AwsAccountName  *string                    `yaml:"AwsAccount"`
 }
 
 // Create creates a wordpress definition in the Threeport API.
@@ -160,7 +163,26 @@ func (w *WordpressDefinitionValues) Create(
 	apiEndpoint string,
 ) (*api_v0.WordpressDefinition, error) {
 	// validate config
-	// TODO
+	// environment
+	if w.Environment != nil {
+		validEnvs := []string{"dev", "prod"}
+		envValid := false
+		for _, env := range validEnvs {
+			if *w.Environment == env {
+				envValid = true
+				break
+			}
+		}
+		if !envValid {
+			return nil, fmt.Errorf("invalid Environment - must be one of %s", validEnvs)
+		}
+	}
+	// domain name
+	if w.DomainName != nil {
+		if w.DomainName.Name == nil {
+			return nil, errors.New("must provide a name for the domain name definition to use")
+		}
+	}
 
 	// construct wordpress definition object
 	wordpressDefinition := api_v0.WordpressDefinition{
@@ -168,13 +190,15 @@ func (w *WordpressDefinitionValues) Create(
 			Name: w.Name,
 		},
 	}
+	if w.Environment != nil {
+		wordpressDefinition.Environment = w.Environment
+	}
 	if w.Replicas != nil {
 		wordpressDefinition.Replicas = w.Replicas
 	}
 	if w.ManagedDatabase != nil {
 		wordpressDefinition.ManagedDatabase = w.ManagedDatabase
 	}
-
 	// create wordpress definition
 	createdWordpressDefinition, err := client_v0.CreateWordpressDefinition(
 		apiClient,
@@ -183,6 +207,73 @@ func (w *WordpressDefinitionValues) Create(
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wordpress definition in threeport API: %w", err)
+	}
+
+	// make domain name definition attachment if defined
+	if w.DomainName != nil {
+		// look up domain name by name
+		domainNameDefinition, err := tpclient.GetDomainNameDefinitionByName(
+			apiClient,
+			apiEndpoint,
+			*w.DomainName.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("domain name definition %s not found: %w", w.DomainName.Name)
+		}
+		// set attachment of wordpress definition to domain name definition
+		if err := tpclient.EnsureAttachedObjectReferenceExists(
+			apiClient,
+			apiEndpoint,
+			tpapi_v0.ObjectTypeDomainNameDefinition,
+			domainNameDefinition.ID,
+			api_v0.ObjectTypeWordpressDefinition,
+			createdWordpressDefinition.ID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to attach wordpress definition to domain name definition: %w", err)
+		}
+	}
+
+	// make AWS account attachment if needed
+	if w.ManagedDatabase != nil && *w.ManagedDatabase {
+		var awsAccountId uint
+		if w.AwsAccountName == nil {
+			// look for default account
+			queryString := "default=true"
+			awsAccounts, err := tpclient.GetAwsAccountsByQueryString(
+				apiClient,
+				apiEndpoint,
+				queryString,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get default AWS account: %w", err)
+			}
+			if len(*awsAccounts) == 0 {
+				return nil, errors.New("no AWS account name provided and no default account found")
+			}
+			awsAccountId = *(*awsAccounts)[0].ID
+		} else {
+			// look up AWS account by name
+			awsAccount, err := tpclient.GetAwsAccountByName(
+				apiClient,
+				apiEndpoint,
+				*w.AwsAccountName,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get AWS account by name %s: %w", *w.AwsAccountName, err)
+			}
+			awsAccountId = *awsAccount.ID
+		}
+		// set attachment of wordpress definition to AWS account
+		if err := tpclient.EnsureAttachedObjectReferenceExists(
+			apiClient,
+			apiEndpoint,
+			tpapi_v0.ObjectTypeAwsAccount,
+			&awsAccountId,
+			api_v0.ObjectTypeWordpressDefinition,
+			createdWordpressDefinition.ID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to attach wordpress definition to AWS account: %w", err)
+		}
 	}
 
 	return createdWordpressDefinition, nil
@@ -225,6 +316,7 @@ type WordpressInstanceConfig struct {
 // config abstraction.
 type WordpressInstanceValues struct {
 	Name                      *string                                   `yaml:"Name"`
+	SubDomain                 *string                                   `yaml:"SubDomain"`
 	WordpressDefinition       WordpressDefinitionValues                 `yaml:"WordpressDefinition"`
 	KubernetesRuntimeInstance *tpconfig.KubernetesRuntimeInstanceValues `yaml:"KubernetesRuntimeInstance"`
 }
@@ -267,6 +359,9 @@ func (w *WordpressInstanceValues) Create(
 			Name: w.Name,
 		},
 		WordpressDefinitionID: wordpressDefinition.ID,
+	}
+	if w.SubDomain != nil {
+		wordpressInstance.SubDomain = w.SubDomain
 	}
 
 	// create wordpress instance

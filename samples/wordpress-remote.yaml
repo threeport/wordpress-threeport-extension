@@ -1,0 +1,10 @@
+Wordpress:
+  Name: remote-dev
+  Environment: dev
+  ManagedDatabase: true
+  DomainName:
+    Name: qleet-net
+  SubDomain: blog
+  KubernetesRuntimeInstance:
+    Name: remote-east
+
