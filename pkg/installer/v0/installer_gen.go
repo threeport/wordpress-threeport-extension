@@ -4,10 +4,16 @@ package v0
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	tp_api "github.com/threeport/threeport/pkg/api/v0"
+	tp_auth "github.com/threeport/threeport/pkg/auth/v0"
 	tp_client "github.com/threeport/threeport/pkg/client/v0"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
+	tp_installer "github.com/threeport/threeport/pkg/threeport-installer/v0"
 	util "github.com/threeport/threeport/pkg/util/v0"
 	api_v0 "github.com/threeport/wordpress-threeport-extension/pkg/api/v0"
 	errors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,12 +26,16 @@ import (
 )
 
 const (
+	DevImageRepo              = "localhost:5001"
+	DevImageTag               = "dev"
 	DbInitFilename            = "db.sql"
 	DbInitLocation            = "/etc/threeport/db-create"
 	defaultNamespace          = "threeport-wordpress"
 	defaultThreeportNamespace = "threeport-control-plane"
 	apiServerDeployName       = "threeport-wordpress-api-server"
 	extensionName             = "lander2k2.com/wordpress-extension-api"
+	caSecretName              = "wordpress-controller-ca"
+	certSecretName            = "wordpress-controller-cert"
 )
 
 // Installer contains the values needed for an extension installation.
@@ -41,6 +51,17 @@ type Installer struct {
 
 	// The Kubernetes namespace the Threeport control plane is installed in.
 	ThreeportNamespace string
+
+	// The container image repository to pull extension's API server and
+	// controller/s' container images from.
+	ControlPlaneImageRepo string
+
+	// The container image tag to use for extension's API server and
+	// controller/s' container image.
+	ControlPlaneImageTag string
+
+	// If true, auth is enabled on Threeport API.
+	AuthEnabled bool
 }
 
 // NewInstaller returns a wordpress extension installer with default values.
@@ -148,6 +169,10 @@ func (i *Installer) InstallWordpressExtension() error {
 	}
 
 	// install wordpress API server deployment
+	apiArgs := []interface{}{"-auto-migrate=true"}
+	if !i.AuthEnabled {
+		apiArgs = append(apiArgs, "-auth-enabled=false")
+	}
 	var wordpressApiDeploy = &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
@@ -180,10 +205,7 @@ func (i *Installer) InstallWordpressExtension() error {
 					"spec": map[string]interface{}{
 						"containers": []interface{}{
 							map[string]interface{}{
-								"args": []interface{}{
-									"-auto-migrate=true",
-									"-auth-enabled=false",
-								},
+								"args": apiArgs,
 								"command": []interface{}{
 									"/rest-api",
 								},
@@ -194,7 +216,11 @@ func (i *Installer) InstallWordpressExtension() error {
 										},
 									},
 								},
-								"image":           "localhost:5001/threeport-wordpress-rest-api:dev",
+								"image": fmt.Sprintf(
+									"%s/threeport-wordpress-rest-api:%s",
+									i.ControlPlaneImageRepo,
+									i.ControlPlaneImageTag,
+								),
 								"imagePullPolicy": "IfNotPresent",
 								"name":            "api-server",
 								"ports": []interface{}{
@@ -257,7 +283,11 @@ func (i *Installer) InstallWordpressExtension() error {
 								"command": []interface{}{
 									"/database-migrator",
 								},
-								"image":           "localhost:5001/threeport-wordpress-database-migrator:dev",
+								"image": fmt.Sprintf(
+									"%s/threeport-wordpress-database-migrator:%s",
+									i.ControlPlaneImageRepo,
+									i.ControlPlaneImageTag,
+								),
 								"imagePullPolicy": "IfNotPresent",
 								"name":            "database-migrator",
 								"volumeMounts": []interface{}{
@@ -346,6 +376,45 @@ func (i *Installer) InstallWordpressExtension() error {
 	}
 
 	// install wordpress controller
+	controllerVolumes := []interface{}{}
+	controllerVolumeMounts := []interface{}{}
+	if i.AuthEnabled {
+		// if auth is enabled, get the Threeport API server CA cert and key from
+		// the Kubernetes cluster.
+		caCert, caKey, err := i.getApiCa()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve Threeport API CA cert and key: %w", err)
+		}
+
+		// load the cert and key
+		x509CaCert, rsaCaKey, err := loadApiCa(caCert, caKey)
+		if err != nil {
+			return fmt.Errorf("failed to load Threeport API CA cert and key: %w", err)
+		}
+
+		// generate a cert and key for the controller that needs to connect to
+		// the Threeport API
+		clientCert, clientKey, err := tp_auth.GenerateCertificate(x509CaCert, rsaCaKey, "localhost")
+		if err != nil {
+			return fmt.Errorf("failed to generate client cert and key for wordpress controller: %w", err)
+		}
+
+		// create secrets for controller to load credentials from
+		if err := i.createAuthCertSecrets(string(caCert), clientCert, clientKey); err != nil {
+			return fmt.Errorf("failed to create client auth certs for wordpress controller: %w", err)
+		}
+
+		// add the volumes and volume mounts for deployment manifest
+		controllerVolumes = getVolumes()
+		controllerVolumeMounts = getVolumeMounts()
+	}
+
+	// set auth enabled flag if auth not enabled (default is true)
+	controllerArgs := []interface{}{}
+	if !i.AuthEnabled {
+		controllerArgs = append(controllerArgs, "-auth-enabled=false")
+	}
+
 	var wordpressControllerDeploy = &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
@@ -377,9 +446,7 @@ func (i *Installer) InstallWordpressExtension() error {
 					"spec": map[string]interface{}{
 						"containers": []interface{}{
 							map[string]interface{}{
-								"args": []interface{}{
-									"-auth-enabled=false",
-								},
+								"args": controllerArgs,
 								"command": []interface{}{
 									"/wordpress-controller",
 								},
@@ -395,7 +462,11 @@ func (i *Installer) InstallWordpressExtension() error {
 										},
 									},
 								},
-								"image":           "localhost:5001/threeport-wordpress-controller:dev",
+								"image": fmt.Sprintf(
+									"%s/threeport-wordpress-controller:%s",
+									i.ControlPlaneImageRepo,
+									i.ControlPlaneImageTag,
+								),
 								"imagePullPolicy": "IfNotPresent",
 								"name":            "wordpress-controller",
 								"readinessProbe": map[string]interface{}{
@@ -410,10 +481,12 @@ func (i *Installer) InstallWordpressExtension() error {
 									"successThreshold":    1,
 									"timeoutSeconds":      1,
 								},
+								"volumeMounts": controllerVolumeMounts,
 							},
 						},
 						"restartPolicy":                 "Always",
 						"terminationGracePeriodSeconds": 30,
+						"volumes":                       controllerVolumes,
 					},
 				},
 			},
@@ -542,4 +615,158 @@ func (i *Installer) RegisterWordpressExtension(
 	}
 
 	return nil
+}
+
+// getApiCa gets the Threeport API CA cert secret from the Kubernetes cluster
+// and returns the base 64 decoded string value for the CA cert and key.
+func (i *Installer) getApiCa() ([]byte, []byte, error) {
+	// get secret resource
+	apiCaSecret, err := kube.GetResource(
+		"core",
+		"v1",
+		"Secret",
+		i.ThreeportNamespace,
+		tp_installer.ThreeportApiCaSecret,
+		i.KubeClient,
+		*i.KubeRestMapper,
+	)
+	if err != nil {
+		return []byte{}, []byte{}, fmt.Errorf("failed to get Threeport API CA secret from Kubernetes cluster: %w", err)
+	}
+
+	// retrieve 'data' field
+	data, found, err := unstructured.NestedMap(apiCaSecret.Object, "data")
+	if err != nil {
+		return []byte{}, []byte{}, fmt.Errorf("failed to retrieve 'data' field: %w", err)
+	}
+	if !found {
+		return []byte{}, []byte{}, fmt.Errorf("'data' field not found in the secret")
+	}
+
+	// extract and decode tls.crt
+	tlsCrtBase64, found := data["tls.crt"].(string)
+	if !found {
+		return []byte{}, []byte{}, fmt.Errorf("'tls.crt' not found in the secret data")
+	}
+	tlsCrtBytes, err := base64.StdEncoding.DecodeString(tlsCrtBase64)
+	if err != nil {
+		return []byte{}, []byte{}, fmt.Errorf("failed to decode 'tls.crt': %w", err)
+	}
+
+	// extract and decode tls.key
+	tlsKeyBase64, found := data["tls.key"].(string)
+	if !found {
+		return []byte{}, []byte{}, fmt.Errorf("'tls.key' not found in the secret data")
+	}
+	tlsKeyBytes, err := base64.StdEncoding.DecodeString(tlsKeyBase64)
+	if err != nil {
+		return []byte{}, []byte{}, fmt.Errorf("failed to decode 'tls.key': %w", err)
+	}
+
+	return tlsCrtBytes, tlsKeyBytes, nil
+}
+
+// loadApiCa takes the PEM encoded CA cert and key as strings and returns the
+// x509.Certificate and rsa.PrivateKey objects.
+func loadApiCa(caCertPem, caKeyPem []byte) (*x509.Certificate, *rsa.PrivateKey, error) {
+	// decode PEM to extract the certificate
+	block, _ := pem.Decode(caCertPem)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, nil, fmt.Errorf("failed to decode CA certificate PEM")
+	}
+
+	// Parse the certificate
+	caCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
+	}
+
+	// decode PEM to extract the private key
+	block, _ = pem.Decode(caKeyPem)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return nil, nil, fmt.Errorf("failed to decode CA private key PEM")
+	}
+
+	// Parse the RSA private key
+	caPrivateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse CA private key: %w", err)
+	}
+
+	return caCert, caPrivateKey, nil
+}
+
+// createAuthCertSecrets creates the Kubernetes secrets needed for a controller
+// to connect to the Threeport API.
+func (i *Installer) createAuthCertSecrets(caCert, clientCert, clientKey string) error {
+	var caCertSecret = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]interface{}{
+				"name":      caSecretName,
+				"namespace": i.ExtensionNamespace,
+			},
+			"stringData": map[string]interface{}{
+				"tls.crt": caCert,
+			},
+		},
+	}
+	if _, err := kube.CreateOrUpdateResource(caCertSecret, i.KubeClient, *i.KubeRestMapper); err != nil {
+		return fmt.Errorf("failed to create/update wordpress CA cert secret: %w", err)
+	}
+
+	var clientCertSecret = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]interface{}{
+				"name":      certSecretName,
+				"namespace": i.ExtensionNamespace,
+			},
+			"stringData": map[string]interface{}{
+				"tls.crt": clientCert,
+				"tls.key": clientKey,
+			},
+		},
+	}
+	if _, err := kube.CreateOrUpdateResource(clientCertSecret, i.KubeClient, *i.KubeRestMapper); err != nil {
+		return fmt.Errorf("failed to create/update wordpress client cert secret: %w", err)
+	}
+
+	return nil
+}
+
+// getVolumes returns the volumes for the CA and client certs needed for a
+// controller to authenticate to the Threeport API.
+func getVolumes() []interface{} {
+	return []interface{}{
+		map[string]interface{}{
+			"name": caSecretName,
+			"secret": map[string]interface{}{
+				"secretName": caSecretName,
+			},
+		},
+		map[string]interface{}{
+			"name": certSecretName,
+			"secret": map[string]interface{}{
+				"secretName": certSecretName,
+			},
+		},
+	}
+}
+
+// getVolumeMounts returns the volume mounts for the CA and client certs needed
+// for a controller to authenticate to the Threeport API.
+func getVolumeMounts() []interface{} {
+	return []interface{}{
+		map[string]interface{}{
+			"mountPath": "/etc/threeport/ca",
+			"name":      caSecretName,
+		},
+		map[string]interface{}{
+			"mountPath": "/etc/threeport/cert",
+			"name":      certSecretName,
+		},
+	}
 }

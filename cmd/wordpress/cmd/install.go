@@ -4,15 +4,21 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	cobra "github.com/spf13/cobra"
 	tptctl_cmd "github.com/threeport/threeport/cmd/tptctl/cmd"
 	cli "github.com/threeport/threeport/pkg/cli/v0"
 	client "github.com/threeport/threeport/pkg/client/v0"
 	config "github.com/threeport/threeport/pkg/config/v0"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
+	version "github.com/threeport/wordpress-threeport-extension/internal/version"
 	installer "github.com/threeport/wordpress-threeport-extension/pkg/installer/v0"
+	"os"
+)
+
+var (
+	development           bool
+	controlPlaneImageRepo string
+	controlPlaneImageTag  string
 )
 
 // installCmd represents the install command
@@ -54,6 +60,13 @@ var installCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// determine if auth is enabled on control plane
+		authEnabled, err := threeportConfig.GetThreeportAuthEnabled(requestedControlPlane)
+		if err != nil {
+			cli.Error("failed to determine if auth is enabled", err)
+			os.Exit(1)
+		}
+
 		// get Kubernetes client
 		dynamicInterface, restMapper, err := kube.GetClient(
 			&kubeRuntimes[0],
@@ -68,16 +81,24 @@ var installCmd = &cobra.Command{
 		}
 
 		// create installer
-		installer := installer.NewInstaller(dynamicInterface, restMapper)
+		inst := installer.NewInstaller(dynamicInterface, restMapper)
+		inst.AuthEnabled = authEnabled
+		if development {
+			inst.ControlPlaneImageRepo = installer.DevImageRepo
+			inst.ControlPlaneImageTag = installer.DevImageTag
+		} else {
+			inst.ControlPlaneImageRepo = controlPlaneImageRepo
+			inst.ControlPlaneImageTag = controlPlaneImageTag
+		}
 
 		// install extension
-		if err := installer.InstallWordpressExtension(); err != nil {
+		if err := inst.InstallWordpressExtension(); err != nil {
 			cli.Error("failed to install Wordpress extension", err)
 			os.Exit(1)
 		}
 
 		// register extension with Threeport API
-		if err := installer.RegisterWordpressExtension(
+		if err := inst.RegisterWordpressExtension(
 			apiClient,
 			apiEndpoint,
 		); err != nil {
@@ -94,4 +115,21 @@ var installCmd = &cobra.Command{
 
 func init() {
 	WordpressCmd.AddCommand(installCmd)
+
+	installCmd.Flags().BoolVarP(
+		&development,
+		"dev", "d", false, fmt.Sprintf(
+			"If true, development image repo (%s) and image tag (%s) will be used",
+			installer.DevImageRepo,
+			installer.DevImageTag,
+		),
+	)
+	installCmd.Flags().StringVarP(
+		&controlPlaneImageRepo,
+		"control-plane-image-repo", "r", "richlander2k2", "Image repo to pull threeport control plane images from.",
+	)
+	installCmd.Flags().StringVarP(
+		&controlPlaneImageTag,
+		"control-plane-image-tag", "t", version.GetVersion(), "Image tag to pull threeport control plane images from.",
+	)
 }

@@ -3,8 +3,6 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"fmt"
 	validator "github.com/go-playground/validator/v10"
@@ -25,7 +23,6 @@ import (
 	zap "go.uber.org/zap"
 	"net/http"
 	"os"
-	"path/filepath"
 )
 
 // @title WordPress Threeport API
@@ -144,54 +141,17 @@ func main() {
 	apiserver_lib.Versions[0] = "v0"
 	versions_v0.AddVersions()
 
-	if authEnabled {
-		configDir := "/etc/threeport"
+	// TODO: implement https, authentication for the extension API server
+	// configure http server
+	server := http.Server{
+		Addr:    ":1323",
+		Handler: e,
+	}
 
-		// load server certificate and private key
-		cert, err := tls.LoadX509KeyPair(filepath.Join(configDir, "cert/tls.crt"), filepath.Join(configDir, "cert/tls.key"))
-		if err != nil {
-			e.Logger.Fatal(err)
-		}
-
-		// load server root certificate authority
-		caCert, err := os.ReadFile(filepath.Join(configDir, "ca/tls.crt"))
-		if err != nil {
-			e.Logger.Fatal(err)
-		}
-
-		// create certificate pool and add server root certificate authority
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-
-		// configure https server
-		server := http.Server{
-			Addr:    ":1323",
-			Handler: e,
-			TLSConfig: &tls.Config{
-				Certificates: []tls.Certificate{cert},
-				ClientAuth:   tls.RequireAndVerifyClientCert,
-				ClientCAs:    caCertPool,
-				RootCAs:      caCertPool,
-			},
-		}
-
-		fmt.Printf("\nThreeport extension REST API for API namespace lander2k2.com: %s\n", version.GetVersion())
-		configureHealthCheckEndpoint()
-		if server.ListenAndServeTLS("", "") != http.ErrServerClosed {
-			e.Logger.Fatal(err)
-		}
-	} else {
-		// configure http server
-		server := http.Server{
-			Addr:    ":1323",
-			Handler: e,
-		}
-
-		fmt.Printf("\nThreeport extension REST API for API namespace lander2k2.com: %s\n", version.GetVersion())
-		configureHealthCheckEndpoint()
-		if server.ListenAndServe() != http.ErrServerClosed {
-			e.Logger.Fatal(err)
-		}
+	fmt.Printf("\nThreeport extension REST API for API namespace lander2k2.com: %s\n", version.GetVersion())
+	configureHealthCheckEndpoint()
+	if server.ListenAndServe() != http.ErrServerClosed {
+		e.Logger.Fatal(err)
 	}
 }
 
