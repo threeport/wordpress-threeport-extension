@@ -219,7 +219,7 @@ func WordpressDefinitionReconciler(r *controller.Reconciler) {
 					operationErr = errors.New("unrecognized version of wordpress definition encountered for creation")
 				}
 				if operationErr != nil {
-					errorMsg := "failed to reconcile created wordpress definition object"
+					errorMsg := "failed to reconcile updated wordpress definition object"
 					log.Error(operationErr, errorMsg)
 					r.EventsRecorder.HandleEventOverride(
 						&tpapi_v0.Event{
@@ -267,7 +267,7 @@ func WordpressDefinitionReconciler(r *controller.Reconciler) {
 					operationErr = errors.New("unrecognized version of wordpress definition encountered for creation")
 				}
 				if operationErr != nil {
-					errorMsg := "failed to reconcile created wordpress definition object"
+					errorMsg := "failed to reconcile deleted wordpress definition object"
 					log.Error(operationErr, errorMsg)
 					r.EventsRecorder.HandleEventOverride(
 						&tpapi_v0.Event{

@@ -219,7 +219,7 @@ func WordpressInstanceReconciler(r *controller.Reconciler) {
 					operationErr = errors.New("unrecognized version of wordpress instance encountered for creation")
 				}
 				if operationErr != nil {
-					errorMsg := "failed to reconcile created wordpress instance object"
+					errorMsg := "failed to reconcile updated wordpress instance object"
 					log.Error(operationErr, errorMsg)
 					r.EventsRecorder.HandleEventOverride(
 						&tpapi_v0.Event{
@@ -267,7 +267,7 @@ func WordpressInstanceReconciler(r *controller.Reconciler) {
 					operationErr = errors.New("unrecognized version of wordpress instance encountered for creation")
 				}
 				if operationErr != nil {
-					errorMsg := "failed to reconcile created wordpress instance object"
+					errorMsg := "failed to reconcile deleted wordpress instance object"
 					log.Error(operationErr, errorMsg)
 					r.EventsRecorder.HandleEventOverride(
 						&tpapi_v0.Event{
