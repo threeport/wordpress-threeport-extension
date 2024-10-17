@@ -26,9 +26,13 @@ type WordpressConfig struct {
 // definition and wordpress instance with a single operation.
 type WordpressValues struct {
 	Name                      *string                                   `yaml:"Name"`
+	Environment               *string                                   `yaml:"Environment"`
 	Replicas                  *int                                      `yaml:"Replicas"`
 	ManagedDatabase           *bool                                     `yaml:"ManagedDatabase"`
+	DomainName                *tpconfig.DomainNameValues                `yaml:"DomainName"`
+	SubDomain                 *string                                   `yaml:"SubDomain"`
 	KubernetesRuntimeInstance *tpconfig.KubernetesRuntimeInstanceValues `yaml:"KubernetesRuntimeInstance"`
+	AwsAccountName            *string                                   `yaml:"AwsAccountName"`
 }
 
 // Create creates a wordpress definition and instance in the Threeport API.
@@ -91,7 +95,12 @@ func (w *WordpressValues) GetOperations(
 
 	// add wordpress definition operation
 	wordpressDefinitionValues := WordpressDefinitionValues{
-		Name: w.Name,
+		Name:            w.Name,
+		Environment:     w.Environment,
+		Replicas:        w.Replicas,
+		ManagedDatabase: w.ManagedDatabase,
+		DomainName:      w.DomainName,
+		AwsAccountName:  w.AwsAccountName,
 	}
 	operations.AppendOperation(util.Operation{
 		Create: func() error {
@@ -114,10 +123,12 @@ func (w *WordpressValues) GetOperations(
 
 	// add wordpress instance operation
 	wordpressInstanceValues := WordpressInstanceValues{
-		Name: w.Name,
+		Name:      w.Name,
+		SubDomain: w.SubDomain,
 		WordpressDefinition: WordpressDefinitionValues{
 			Name: w.Name,
 		},
+		KubernetesRuntimeInstance: w.KubernetesRuntimeInstance,
 	}
 	operations.AppendOperation(util.Operation{
 		Create: func() error {
@@ -218,7 +229,7 @@ func (w *WordpressDefinitionValues) Create(
 			*w.DomainName.Name,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("domain name definition %s not found: %w", w.DomainName.Name)
+			return nil, fmt.Errorf("domain name definition %s not found: %w", *w.DomainName.Name, err)
 		}
 		// set attachment of wordpress definition to domain name definition
 		if err := tpclient.EnsureAttachedObjectReferenceExists(
