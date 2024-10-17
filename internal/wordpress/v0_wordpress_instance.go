@@ -386,7 +386,7 @@ func v0WordpressInstanceDeleted(
 		if err := tpclient.EnsureAttachedObjectReferenceRemoved(
 			r.APIClient,
 			r.APIServer,
-			tpapi.ObjectTypeGatewayInstance,
+			tpapi.ObjectTypeDomainNameInstance,
 			domainNameInstanceId,
 			v0.ObjectTypeWordpressInstance,
 			wordpressInstance.ID,

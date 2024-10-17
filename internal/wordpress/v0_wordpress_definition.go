@@ -74,6 +74,8 @@ func v0WordpressDefinitionCreated(
 			return 0, fmt.Errorf("failed to create Threeport workload definition: %w", err)
 		}
 		createdWorkloadDefinition = createdWorkloadDef
+	} else {
+		createdWorkloadDefinition = &(*existingWorkloadDefinitions)[0]
 	}
 
 	// establish attachment between wordpress definition and workload definition
