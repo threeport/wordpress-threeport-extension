@@ -429,7 +429,7 @@ func BuildPlugin() error {
 		return fmt.Errorf("build failed for tptctl plugin with output '%s': %w", output, err)
 	}
 
-	fmt.Println("tptctl plugin built and available at bin/wordpress")
+	fmt.Println("tptctl plugin built and available at bin/wordpress.so")
 
 	return nil
 }
