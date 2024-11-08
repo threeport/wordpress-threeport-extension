@@ -26,8 +26,8 @@ import (
 )
 
 const (
+	ReleaseImageRepo          = "richlander2k2"
 	DevImageRepo              = "localhost:5001"
-	DevImageTag               = "dev"
 	DbInitFilename            = "db.sql"
 	DbInitLocation            = "/etc/threeport/db-create"
 	defaultNamespace          = "threeport-wordpress"

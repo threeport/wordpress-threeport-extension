@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	util "github.com/threeport/threeport/pkg/util/v0"
+	version "github.com/threeport/wordpress-threeport-extension/internal/version"
 	installer "github.com/threeport/wordpress-threeport-extension/pkg/installer/v0"
 	"os"
 	"os/exec"
@@ -97,7 +98,7 @@ func BuildApiDevImage() error {
 
 	if err := BuildApiImage(
 		installer.DevImageRepo,
-		installer.DevImageTag,
+		version.GetVersion(),
 		arch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push dev rest-api image: %w", err)
@@ -109,8 +110,8 @@ func BuildApiDevImage() error {
 // BuildApiReleaseImage builds and pushes a release REST API container image.
 func BuildApiReleaseImage() error {
 	if err := BuildApiImage(
-		installer.DevImageRepo,
-		installer.DevImageTag,
+		installer.ReleaseImageRepo,
+		version.GetVersion(),
 		"amd64",
 	); err != nil {
 		return fmt.Errorf("failed to build and push release rest-api image: %w", err)
@@ -202,7 +203,7 @@ func BuildDbMigratorDevImage() error {
 
 	if err := BuildDbMigratorImage(
 		installer.DevImageRepo,
-		installer.DevImageTag,
+		version.GetVersion(),
 		arch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push dev database-migrator image: %w", err)
@@ -214,8 +215,8 @@ func BuildDbMigratorDevImage() error {
 // BuildDbMigratorReleaseImage builds and pushes a release database migrator container image.
 func BuildDbMigratorReleaseImage() error {
 	if err := BuildDbMigratorImage(
-		installer.DevImageRepo,
-		installer.DevImageTag,
+		installer.ReleaseImageRepo,
+		version.GetVersion(),
 		"amd64",
 	); err != nil {
 		return fmt.Errorf("failed to build and push release database-migrator image: %w", err)
@@ -307,7 +308,7 @@ func BuildWordpressControllerDevImage() error {
 
 	if err := BuildWordpressControllerImage(
 		installer.DevImageRepo,
-		installer.DevImageTag,
+		version.GetVersion(),
 		arch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push dev wordpress-controller image: %w", err)
@@ -319,8 +320,8 @@ func BuildWordpressControllerDevImage() error {
 // BuildWordpressControllerReleaseImage builds and pushes a release wordpress-controller container image.
 func BuildWordpressControllerReleaseImage() error {
 	if err := BuildWordpressControllerImage(
-		installer.DevImageRepo,
-		installer.DevImageTag,
+		installer.ReleaseImageRepo,
+		version.GetVersion(),
 		"amd64",
 	); err != nil {
 		return fmt.Errorf("failed to build and push release wordpress-controller image: %w", err)
@@ -402,7 +403,7 @@ func LoadDevImage(kindClusterName string, component string) error {
 		arch,
 		installer.DevImageRepo,
 		imageName,
-		installer.DevImageTag,
+		version.GetVersion(),
 		false,
 		true,
 		kindClusterName,

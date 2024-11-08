@@ -85,7 +85,7 @@ var installCmd = &cobra.Command{
 		inst.AuthEnabled = authEnabled
 		if development {
 			inst.ControlPlaneImageRepo = installer.DevImageRepo
-			inst.ControlPlaneImageTag = installer.DevImageTag
+			inst.ControlPlaneImageTag = controlPlaneImageTag
 		} else {
 			inst.ControlPlaneImageRepo = controlPlaneImageRepo
 			inst.ControlPlaneImageTag = controlPlaneImageTag
@@ -121,12 +121,12 @@ func init() {
 		"dev", "d", false, fmt.Sprintf(
 			"If true, development image repo (%s) and image tag (%s) will be used",
 			installer.DevImageRepo,
-			installer.DevImageTag,
+			version.GetVersion(),
 		),
 	)
 	installCmd.Flags().StringVarP(
 		&controlPlaneImageRepo,
-		"control-plane-image-repo", "r", "richlander2k2", "Image repo to pull threeport control plane images from.",
+		"control-plane-image-repo", "r", installer.ReleaseImageRepo, "Image repo to pull threeport control plane images from.",
 	)
 	installCmd.Flags().StringVarP(
 		&controlPlaneImageTag,
