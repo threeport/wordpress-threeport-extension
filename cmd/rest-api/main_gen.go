@@ -28,8 +28,8 @@ import (
 // @title WordPress Threeport API
 // @version v0.0.1-dev
 // @description API server for the WordPress extension to Threeport.
-// @contact.name Richard Laner
-// @contact.email lander2k2@gmail.com
+// @contact.name Richard Lander
+// @contact.email lander2k2@protonmail.com
 // @BasePath /lander2k2.com
 func main() {
 	// flags

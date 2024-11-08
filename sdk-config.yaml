@@ -3,8 +3,8 @@ ApiNamespace: lander2k2.com
 ApiDocs:
   Title: WordPress Threeport API
   Description: API server for the WordPress extension to Threeport.
-  ContactName: Richard Laner
-  ContactEmail: lander2k2@gmail.com
+  ContactName: Richard Lander
+  ContactEmail: lander2k2@protonmail.com
 ImageRepo: richlander2k2
 #Overwrites:
 #  - "cmd/database-migrator/migrations/000001_init.go"
