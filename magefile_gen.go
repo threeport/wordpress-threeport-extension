@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	mg "github.com/magefile/mage/mg"
 	util "github.com/threeport/threeport/pkg/util/v0"
 	version "github.com/threeport/wordpress-threeport-extension/internal/version"
 	installer "github.com/threeport/wordpress-threeport-extension/pkg/installer/v0"
@@ -15,8 +16,22 @@ import (
 	"runtime"
 )
 
-// BuildApi builds the REST API binary.
-func BuildApi(arch string) error {
+const releaseArch = "amd64"
+
+// Build provides a type for methods that implement build targets.
+type Build mg.Namespace
+
+// Test provides a type for methods that implement test targets.
+type Test mg.Namespace
+
+// Install provides a type for methods that implement install targets.
+type Install mg.Namespace
+
+// Dev provides a type for methods that implement dev targets.
+type Dev mg.Namespace
+
+// ApiBin builds the REST API binary.
+func (Build) ApiBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
@@ -37,32 +52,34 @@ func BuildApi(arch string) error {
 	return nil
 }
 
-// BuildDevApi builds the REST API binary for the architcture of the machine
+// ApiBinDev builds the REST API binary for the architcture of the machine
 // where it is built.
-func BuildDevApi() error {
+func (Build) ApiBinDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildApi(arch); err != nil {
+	build := Build{}
+	if err := build.ApiBin(arch); err != nil {
 		return fmt.Errorf("failed to build dev rest-api binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildReleaseApi builds the REST API binary for amd64 architecture.
-func BuildReleaseApi() error {
-	if err := BuildApi("amd64"); err != nil {
+// ApiBinRelease builds the REST API binary for release architecture.
+func (Build) ApiBinRelease() error {
+	build := Build{}
+	if err := build.ApiBin(releaseArch); err != nil {
 		return fmt.Errorf("failed to build release rest-api binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildApiImage builds and pushes a REST API container image.
-func BuildApiImage(
+// ApiImage builds and pushes a REST API container image.
+func (Build) ApiImage(
 	imageRepo string,
 	imageTag string,
 	arch string,
@@ -89,14 +106,15 @@ func BuildApiImage(
 	return nil
 }
 
-// BuildApiDevImage builds and pushes a development REST API container image.
-func BuildApiDevImage() error {
+// ApiImageDev builds and pushes a development REST API container image.
+func (Build) ApiImageDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildApiImage(
+	build := Build{}
+	if err := build.ApiImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
 		arch,
@@ -107,12 +125,13 @@ func BuildApiDevImage() error {
 	return nil
 }
 
-// BuildApiReleaseImage builds and pushes a release REST API container image.
-func BuildApiReleaseImage() error {
-	if err := BuildApiImage(
+// ApiImageRelease builds and pushes a release REST API container image.
+func (Build) ApiImageRelease() error {
+	build := Build{}
+	if err := build.ApiImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
-		"amd64",
+		releaseArch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push release rest-api image: %w", err)
 	}
@@ -120,8 +139,8 @@ func BuildApiReleaseImage() error {
 	return nil
 }
 
-// BuildDbMigrator builds the database migrator binary.
-func BuildDbMigrator(arch string) error {
+// DbMigratorBin builds the database migrator binary.
+func (Build) DbMigratorBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
@@ -142,32 +161,34 @@ func BuildDbMigrator(arch string) error {
 	return nil
 }
 
-// BuildDevDbMigrator builds the database migrator binary for the architcture of the machine
+// DbMigratorBinDev builds the database migrator binary for the architcture of the machine
 // where it is built.
-func BuildDevDbMigrator() error {
+func (Build) DbMigratorBinDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildDbMigrator(arch); err != nil {
+	build := Build{}
+	if err := build.DbMigratorBin(arch); err != nil {
 		return fmt.Errorf("failed to build dev database-migrator binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildReleaseDbMigrator builds the database migrator binary for amd64 architecture.
-func BuildReleaseDbMigrator() error {
-	if err := BuildDbMigrator("amd64"); err != nil {
+// DbMigratorBinRelease builds the database migrator binary for release architecture.
+func (Build) DbMigratorBinRelease() error {
+	build := Build{}
+	if err := build.DbMigratorBin(releaseArch); err != nil {
 		return fmt.Errorf("failed to build release database-migrator binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildDbMigratorImage builds and pushes a database migrator container image.
-func BuildDbMigratorImage(
+// DbMigratorImage builds and pushes a database migrator container image.
+func (Build) DbMigratorImage(
 	imageRepo string,
 	imageTag string,
 	arch string,
@@ -194,14 +215,15 @@ func BuildDbMigratorImage(
 	return nil
 }
 
-// BuildDbMigratorDevImage builds and pushes a development database migrator container image.
-func BuildDbMigratorDevImage() error {
+// DbMigratorImageDev builds and pushes a development database migrator container image.
+func (Build) DbMigratorImageDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildDbMigratorImage(
+	build := Build{}
+	if err := build.DbMigratorImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
 		arch,
@@ -212,12 +234,13 @@ func BuildDbMigratorDevImage() error {
 	return nil
 }
 
-// BuildDbMigratorReleaseImage builds and pushes a release database migrator container image.
-func BuildDbMigratorReleaseImage() error {
-	if err := BuildDbMigratorImage(
+// DbMigratorImageRelease builds and pushes a release database migrator container image.
+func (Build) DbMigratorImageRelease() error {
+	build := Build{}
+	if err := build.DbMigratorImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
-		"amd64",
+		releaseArch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push release database-migrator image: %w", err)
 	}
@@ -225,8 +248,8 @@ func BuildDbMigratorReleaseImage() error {
 	return nil
 }
 
-// BuildWordpressController builds the binary for the wordpress-controller.
-func BuildWordpressController(arch string) error {
+// WordpressControllerBin builds the binary for the wordpress-controller.
+func (Build) WordpressControllerBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
@@ -247,32 +270,34 @@ func BuildWordpressController(arch string) error {
 	return nil
 }
 
-// BuildDevWordpressController builds the wordpress-controller binary for the architcture of the machine
+// WordpressControllerBinDev builds the wordpress-controller binary for the architcture of the machine
 // where it is built.
-func BuildDevWordpressController() error {
+func (Build) WordpressControllerBinDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildWordpressController(arch); err != nil {
+	build := Build{}
+	if err := build.WordpressControllerBin(arch); err != nil {
 		return fmt.Errorf("failed to build dev wordpress-controller binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildReleaseWordpressController builds the wordpress-controller binary for amd64 architecture.
-func BuildReleaseWordpressController() error {
-	if err := BuildWordpressController("amd64"); err != nil {
+// WordpressControllerBinRelease builds the wordpress-controller binary for release architecture.
+func (Build) WordpressControllerBinRelease() error {
+	build := Build{}
+	if err := build.WordpressControllerBin(releaseArch); err != nil {
 		return fmt.Errorf("failed to build release wordpress-controller binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildWordpressControllerImage builds and pushes the container image for the wordpress-controller.
-func BuildWordpressControllerImage(
+// WordpressControllerImage builds and pushes the container image for the wordpress-controller.
+func (Build) WordpressControllerImage(
 	imageRepo string,
 	imageTag string,
 	arch string,
@@ -299,14 +324,15 @@ func BuildWordpressControllerImage(
 	return nil
 }
 
-// BuildWordpressControllerDevImage builds and pushes a development wordpress-controller container image.
-func BuildWordpressControllerDevImage() error {
+// WordpressControllerImageDev builds and pushes a development wordpress-controller container image.
+func (Build) WordpressControllerImageDev() error {
 	_, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get local CPU architecture: %w", err)
 	}
 
-	if err := BuildWordpressControllerImage(
+	build := Build{}
+	if err := build.WordpressControllerImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
 		arch,
@@ -317,12 +343,13 @@ func BuildWordpressControllerDevImage() error {
 	return nil
 }
 
-// BuildWordpressControllerReleaseImage builds and pushes a release wordpress-controller container image.
-func BuildWordpressControllerReleaseImage() error {
-	if err := BuildWordpressControllerImage(
+// WordpressControllerImageRelease builds and pushes a release wordpress-controller container image.
+func (Build) WordpressControllerImageRelease() error {
+	build := Build{}
+	if err := build.WordpressControllerImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
-		"amd64",
+		releaseArch,
 	); err != nil {
 		return fmt.Errorf("failed to build and push release wordpress-controller image: %w", err)
 	}
@@ -330,63 +357,120 @@ func BuildWordpressControllerReleaseImage() error {
 	return nil
 }
 
-// BuildAll builds the binaries for all components.
-func BuildAll(arch string) error {
-	if err := BuildApi(arch); err != nil {
+// AllBins builds the binaries for all components.
+func (Build) AllBins(arch string) error {
+	build := Build{}
+	if err := build.ApiBin(arch); err != nil {
 		return fmt.Errorf("failed to build binary: %w", err)
 	}
 
-	if err := BuildDbMigrator(arch); err != nil {
+	if err := build.DbMigratorBin(arch); err != nil {
 		return fmt.Errorf("failed to build binary: %w", err)
 	}
 
-	if err := BuildWordpressController(arch); err != nil {
+	if err := build.WordpressControllerBin(arch); err != nil {
 		return fmt.Errorf("failed to build binary: %w", err)
 	}
 
 	return nil
 }
 
-// BuildAllImages builds and pushes images for all components.
-func BuildAllImages(
+// AllBins builds the development binaries for all components.
+func (Build) AllBinsDev() error {
+	build := Build{}
+	if err := build.ApiBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	if err := build.DbMigratorBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	if err := build.WordpressControllerBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	return nil
+}
+
+// AllBins builds the release binaries for all components.
+func (Build) AllBinsRelease() error {
+	build := Build{}
+	if err := build.ApiBinRelease(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	if err := build.DbMigratorBinRelease(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	if err := build.WordpressControllerBinRelease(); err != nil {
+		return fmt.Errorf("failed to build binary: %w", err)
+	}
+
+	return nil
+}
+
+// AllImages builds and pushes images for all components.
+func (Build) AllImages(
 	imageRepo string,
 	imageTag string,
 	arch string,
 ) error {
-	if err := BuildApiImage(imageRepo, imageTag, arch); err != nil {
+	build := Build{}
+	if err := build.ApiImage(imageRepo, imageTag, arch); err != nil {
 		return fmt.Errorf("failed to build and push image: %w", err)
 	}
 
-	if err := BuildDbMigratorImage(imageRepo, imageTag, arch); err != nil {
+	if err := build.DbMigratorImage(imageRepo, imageTag, arch); err != nil {
 		return fmt.Errorf("failed to build and push image: %w", err)
 	}
 
-	if err := BuildWordpressControllerImage(imageRepo, imageTag, arch); err != nil {
-		return fmt.Errorf("failed to build and push image: %w", err)
-	}
-
-	return nil
-}
-
-// BuildAllDevImages builds and pushes development images for all components.
-func BuildAllDevImages() error {
-	if err := BuildApiDevImage(); err != nil {
-		return fmt.Errorf("failed to build and push image: %w", err)
-	}
-
-	if err := BuildDbMigratorDevImage(); err != nil {
-		return fmt.Errorf("failed to build and push image: %w", err)
-	}
-
-	if err := BuildWordpressControllerDevImage(); err != nil {
+	if err := build.WordpressControllerImage(imageRepo, imageTag, arch); err != nil {
 		return fmt.Errorf("failed to build and push image: %w", err)
 	}
 
 	return nil
 }
 
-// LoadDevImage builds and loads an image to the provided kind cluster.
-func LoadDevImage(kindClusterName string, component string) error {
+// AllImagesDev builds and pushes development images for all components.
+func (Build) AllImagesDev() error {
+	build := Build{}
+	if err := build.ApiImageDev(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	if err := build.DbMigratorImageDev(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	if err := build.WordpressControllerImageDev(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	return nil
+}
+
+// AllImagesRelease builds and pushes development images for all components.
+func (Build) AllImagesRelease() error {
+	build := Build{}
+	if err := build.ApiImageRelease(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	if err := build.DbMigratorImageRelease(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	if err := build.WordpressControllerImageRelease(); err != nil {
+		return fmt.Errorf("failed to build and push image: %w", err)
+	}
+
+	return nil
+}
+
+// LoadImage builds and loads an image to the provided kind cluster.
+func (Dev) LoadImage(kindClusterName string, component string) error {
 	workingDir, arch, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get build values: %w", err)
@@ -414,8 +498,8 @@ func LoadDevImage(kindClusterName string, component string) error {
 	return nil
 }
 
-// BuildPlugin compiles the extension's tptctl plugin
-func BuildPlugin() error {
+// Plugin compiles the extension's tptctl plugin.
+func (Build) Plugin() error {
 	buildCmd := exec.Command(
 		"go",
 		"build",
@@ -435,8 +519,8 @@ func BuildPlugin() error {
 	return nil
 }
 
-// Docs generates the API server documentation that is served by the API
-func Docs() error {
+// GenerateSwaggerDocs generates the API server swagger documentation served by the API.
+func (Dev) GenerateSwaggerDocs() error {
 	docsDestination := "pkg/api-server/v0/docs"
 	swagCmd := exec.Command(
 		"swag",
