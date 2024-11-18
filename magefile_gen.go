@@ -90,6 +90,11 @@ func (Build) ApiImage(
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	build := Build{}
+	if err := build.ApiBin(arch); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := util.BuildImage(
 		workingDir,
 		"cmd/rest-api/image/Dockerfile-alpine",
@@ -207,6 +212,11 @@ func (Build) DbMigratorImage(
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	build := Build{}
+	if err := build.DbMigratorBin(arch); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := util.BuildImage(
 		workingDir,
 		"cmd/database-migrator/image/Dockerfile-alpine",
@@ -322,6 +332,11 @@ func (Build) WordpressControllerImage(
 	workingDir, _, err := getBuildVals()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	build := Build{}
+	if err := build.WordpressControllerBin(arch); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
 	}
 
 	if err := util.BuildImage(
