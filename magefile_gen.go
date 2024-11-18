@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	mg "github.com/magefile/mage/mg"
+	tptdev "github.com/threeport/threeport/pkg/threeport-installer/v0/tptdev"
 	util "github.com/threeport/threeport/pkg/util/v0"
 	version "github.com/threeport/wordpress-threeport-extension/internal/version"
 	installer "github.com/threeport/wordpress-threeport-extension/pkg/installer/v0"
@@ -34,7 +35,7 @@ type Dev mg.Namespace
 func (Build) ApiBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildBinary(
@@ -86,7 +87,7 @@ func (Build) ApiImage(
 ) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildImage(
@@ -114,6 +115,10 @@ func (Build) ApiImageDev() error {
 	}
 
 	build := Build{}
+	if err := build.ApiBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.ApiImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -128,6 +133,10 @@ func (Build) ApiImageDev() error {
 // ApiImageRelease builds and pushes a release REST API container image.
 func (Build) ApiImageRelease() error {
 	build := Build{}
+	if err := build.ApiBinRelease(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.ApiImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -143,7 +152,7 @@ func (Build) ApiImageRelease() error {
 func (Build) DbMigratorBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildBinary(
@@ -195,7 +204,7 @@ func (Build) DbMigratorImage(
 ) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildImage(
@@ -223,6 +232,10 @@ func (Build) DbMigratorImageDev() error {
 	}
 
 	build := Build{}
+	if err := build.DbMigratorBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.DbMigratorImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -237,6 +250,10 @@ func (Build) DbMigratorImageDev() error {
 // DbMigratorImageRelease builds and pushes a release database migrator container image.
 func (Build) DbMigratorImageRelease() error {
 	build := Build{}
+	if err := build.DbMigratorBinRelease(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.DbMigratorImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -252,7 +269,7 @@ func (Build) DbMigratorImageRelease() error {
 func (Build) WordpressControllerBin(arch string) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildBinary(
@@ -304,7 +321,7 @@ func (Build) WordpressControllerImage(
 ) error {
 	workingDir, _, err := getBuildVals()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory for extension repo: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if err := util.BuildImage(
@@ -332,6 +349,10 @@ func (Build) WordpressControllerImageDev() error {
 	}
 
 	build := Build{}
+	if err := build.WordpressControllerBinDev(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.WordpressControllerImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -346,6 +367,10 @@ func (Build) WordpressControllerImageDev() error {
 // WordpressControllerImageRelease builds and pushes a release wordpress-controller container image.
 func (Build) WordpressControllerImageRelease() error {
 	build := Build{}
+	if err := build.WordpressControllerImageRelease(); err != nil {
+		return fmt.Errorf("failed to build binary for image build: %w", err)
+	}
+
 	if err := build.WordpressControllerImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -540,6 +565,24 @@ func (Dev) GenerateSwaggerDocs() error {
 	}
 
 	fmt.Printf("API docs generated in %s\n", docsDestination)
+
+	return nil
+}
+
+// LocalRegistryUp starts a docker container to serve as a local container registry.
+func (Dev) LocalRegistryUp() error {
+	if err := tptdev.CreateLocalRegistry(); err != nil {
+		return fmt.Errorf("failed to create local container registry: %w", err)
+	}
+
+	return nil
+}
+
+// LocalRegistryDown stops and removes the local container registry.
+func (Dev) LocalRegistryDown() error {
+	if err := tptdev.DeleteLocalRegistry(); err != nil {
+		return fmt.Errorf("failed to remove local container registry: %w", err)
+	}
 
 	return nil
 }
