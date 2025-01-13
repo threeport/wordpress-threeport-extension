@@ -3,16 +3,74 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
 	cobra "github.com/spf13/cobra"
 	cli "github.com/threeport/threeport/pkg/cli/v0"
+	config "github.com/threeport/threeport/pkg/config/v0"
+	"os"
 )
 
-var CliArgs = &cli.GenesisControlPlaneCLIArgs{}
+var cliArgs = &cli.GenesisControlPlaneCLIArgs{}
 
-// WordpressCmd represents the wordpress command which is the root command for
-// the wordpress plugin.
-var WordpressCmd = &cobra.Command{
+// rootCmd represents the wordpress command which is the root command for
+// the Wordpress plugin.
+var rootCmd = &cobra.Command{
 	Long:  "Manage the Wordpress Threeport extension",
 	Short: "Manage the Wordpress Threeport extension",
 	Use:   "wordpress",
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		cli.Error("", err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(
+		&cliArgs.CfgFile, "threeport-config", "", "Path to config file (default is $HOME/.threeport/config.yaml). Can also be set with environment variable THREEPORT_CONFIG",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&cliArgs.ProviderConfigDir, "provider-config", "", "Path to infra provider config directory (default is $HOME/.threeport/).",
+	)
+	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	cobra.OnInitialize(func() {
+		cli.InitConfig(cliArgs.CfgFile)
+		cli.InitArgs(cliArgs)
+	})
+}
+
+func CommandPreRunFunc(cmd *cobra.Command, args []string) {
+	if err := initializeCommandContext(cmd); err != nil {
+		cli.Error("could not initialize command in pre run:", err)
+		os.Exit(1)
+	}
+}
+
+func initializeCommandContext(cmd *cobra.Command) error {
+	// get threeport config and extract threeport API endpoint
+	threeportConfig, requestedControlPlane, err := config.GetThreeportConfig(cliArgs.ControlPlaneName)
+	if err != nil {
+		return fmt.Errorf("failed to get threeport config: %w", err)
+	}
+
+	apiEndpoint, err := threeportConfig.GetThreeportAPIEndpoint(requestedControlPlane)
+	if err != nil {
+		return fmt.Errorf("failed to get threeport API endpoint from config: %w", err)
+	}
+
+	apiClient, err := threeportConfig.GetHTTPClient(requestedControlPlane)
+	if err != nil {
+		return fmt.Errorf("failed to create threeport API client: %w", err)
+	}
+
+	ctx := context.WithValue(cmd.Context(), "apiClient", apiClient)
+	ctx = context.WithValue(ctx, "config", threeportConfig)
+	ctx = context.WithValue(ctx, "apiEndpoint", apiEndpoint)
+	ctx = context.WithValue(ctx, "requestedControlPlane", requestedControlPlane)
+	cmd.SetContext(ctx)
+
+	return nil
 }

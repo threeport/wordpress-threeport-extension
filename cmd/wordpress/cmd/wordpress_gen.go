@@ -30,7 +30,7 @@ var getWordpressDefinitionVersion string
 var GetWordpressDefinitionsCmd = &cobra.Command{
 	Example: "  tptctl wordpress get wordpress-definitions",
 	Long:    "Get wordpress definitions from the system.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, requestedControlPlane := tptctl_cmd.GetClientContext(cmd)
 
@@ -73,7 +73,7 @@ func init() {
 	GetCmd.AddCommand(GetWordpressDefinitionsCmd)
 
 	GetWordpressDefinitionsCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	GetWordpressDefinitionsCmd.Flags().StringVarP(
@@ -91,7 +91,7 @@ var (
 var CreateWordpressDefinitionCmd = &cobra.Command{
 	Example: "  tptctl wordpress create wordpress-definition --config path/to/config.yaml",
 	Long:    "Create a new wordpress definition.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -138,7 +138,7 @@ func init() {
 	)
 	CreateWordpressDefinitionCmd.MarkFlagRequired("config")
 	CreateWordpressDefinitionCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	CreateWordpressDefinitionCmd.Flags().StringVarP(
@@ -157,7 +157,7 @@ var (
 var DeleteWordpressDefinitionCmd = &cobra.Command{
 	Example: "  # delete based on config file\n  tptctl wordpress delete wordpress-definition --config path/to/config.yaml\n\n  # delete based on name\n  tptctl wordpress delete wordpress-definition --name some-wordpress-definition",
 	Long:    "Delete an existing wordpress definition.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -225,7 +225,7 @@ func init() {
 		"name", "n", "", "Name of wordpress definition.",
 	)
 	DeleteWordpressDefinitionCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	DeleteWordpressDefinitionCmd.Flags().StringVarP(
@@ -246,7 +246,7 @@ var (
 var DescribeWordpressDefinitionCmd = &cobra.Command{
 	Example: "  # Get the plain output description for a wordpress definition\n  tptctl wordpress describe wordpress-definition -n some-wordpress-definition\n\n  # Get JSON output for a wordpress definition\n  tptctl wordpress describe wordpress-definition -n some-wordpress-definition -o json\n\n  # Get the value of the Name field for a wordpress definition\n  tptctl wordpress describe wordpress-definition -n some-wordpress-definition -f Name ",
 	Long:    "Describe a wordpress definition.  This command can give you a plain output description, output all fields in JSON or YAML format, or provide the value of any specific field.\n\nNote: any values that are encrypted in the database will be redacted unless the field is specifically requested with the --field flag.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -339,7 +339,7 @@ var DescribeWordpressDefinitionCmd = &cobra.Command{
 			}
 			if encrypted {
 				// get encryption key from threeport config
-				threeportConfig, requestedControlPlane, err := tptctl_config.GetThreeportConfig(CliArgs.ControlPlaneName)
+				threeportConfig, requestedControlPlane, err := tptctl_config.GetThreeportConfig(cliArgs.ControlPlaneName)
 				if err != nil {
 					cli.Error("failed to get threeport config: %w", err)
 					os.Exit(1)
@@ -422,7 +422,7 @@ func init() {
 		"field", "f", "", "Object field to get value for. If used, --output flag will be ignored.  *Only* the value of the desired field will be returned.  Will not return information on related objects, only direct attributes of the object itself.",
 	)
 	DescribeWordpressDefinitionCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	DescribeWordpressDefinitionCmd.Flags().StringVarP(
@@ -439,7 +439,7 @@ func init() {
 var GetWordpressesCmd = &cobra.Command{
 	Example: "  tptctl wordpress get wordpresses",
 	Long:    "Get wordpresses from the system.\n\nA wordpress is a simple abstraction of wordpress definitions and wordpress instances.\nThis command displays all instances and the definitions used to configure them.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, requestedControlPlane := tptctl_cmd.GetClientContext(cmd)
 
@@ -476,7 +476,7 @@ func init() {
 	GetCmd.AddCommand(GetWordpressesCmd)
 
 	GetWordpressesCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 }
@@ -490,7 +490,7 @@ var (
 var CreateWordpressCmd = &cobra.Command{
 	Example: "  tptctl wordpress create wordpress --config path/to/config.yaml",
 	Long:    "Create a new wordpress. This command creates a new wordpress definition and wordpress instance based on the wordpress config.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -543,7 +543,7 @@ func init() {
 	)
 	CreateWordpressCmd.MarkFlagRequired("config")
 	CreateWordpressCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	CreateWordpressCmd.Flags().StringVarP(
@@ -562,7 +562,7 @@ var (
 var DeleteWordpressCmd = &cobra.Command{
 	Example: "  # delete based on config file\n  tptctl wordpress delete wordpress --config path/to/config.yaml\n\n  # delete based on name\n  tptctl wordpress delete wordpress --name some-wordpress",
 	Long:    "Delete an existing wordpress. This command deletes an existing wordpress definition and wordpress instance based on the wordpress config.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -616,7 +616,7 @@ func init() {
 		"config", "c", "", "Path to file with wordpress config.",
 	)
 	DeleteWordpressCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	DeleteWordpressCmd.Flags().StringVarP(
@@ -635,7 +635,7 @@ var getWordpressInstanceVersion string
 var GetWordpressInstancesCmd = &cobra.Command{
 	Example: "  tptctl wordpress get wordpress-instances",
 	Long:    "Get wordpress instances from the system.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, requestedControlPlane := tptctl_cmd.GetClientContext(cmd)
 
@@ -678,7 +678,7 @@ func init() {
 	GetCmd.AddCommand(GetWordpressInstancesCmd)
 
 	GetWordpressInstancesCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	GetWordpressInstancesCmd.Flags().StringVarP(
@@ -696,7 +696,7 @@ var (
 var CreateWordpressInstanceCmd = &cobra.Command{
 	Example: "  tptctl wordpress create wordpress-instance --config path/to/config.yaml",
 	Long:    "Create a new wordpress instance.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -743,7 +743,7 @@ func init() {
 	)
 	CreateWordpressInstanceCmd.MarkFlagRequired("config")
 	CreateWordpressInstanceCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	CreateWordpressInstanceCmd.Flags().StringVarP(
@@ -762,7 +762,7 @@ var (
 var DeleteWordpressInstanceCmd = &cobra.Command{
 	Example: "  # delete based on config file\n  tptctl wordpress delete wordpress-instance --config path/to/config.yaml\n\n  # delete based on name\n  tptctl wordpress delete wordpress-instance --name some-wordpress-instance",
 	Long:    "Delete an existing wordpress instance.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -830,7 +830,7 @@ func init() {
 		"name", "n", "", "Name of wordpress instance.",
 	)
 	DeleteWordpressInstanceCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	DeleteWordpressInstanceCmd.Flags().StringVarP(
@@ -851,7 +851,7 @@ var (
 var DescribeWordpressInstanceCmd = &cobra.Command{
 	Example: "  # Get the plain output description for a wordpress instance\n  tptctl wordpress describe wordpress-instance -n some-wordpress-instance\n\n  # Get JSON output for a wordpress instance\n  tptctl wordpress describe wordpress-instance -n some-wordpress-instance -o json\n\n  # Get the value of the Name field for a wordpress instance\n  tptctl wordpress describe wordpress-instance -n some-wordpress-instance -f Name ",
 	Long:    "Describe a wordpress instance.  This command can give you a plain output description, output all fields in JSON or YAML format, or provide the value of any specific field.\n\nNote: any values that are encrypted in the database will be redacted unless the field is specifically requested with the --field flag.",
-	PreRun:  tptctl_cmd.CommandPreRunFunc,
+	PreRun:  CommandPreRunFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiClient, _, apiEndpoint, _ := tptctl_cmd.GetClientContext(cmd)
 
@@ -944,7 +944,7 @@ var DescribeWordpressInstanceCmd = &cobra.Command{
 			}
 			if encrypted {
 				// get encryption key from threeport config
-				threeportConfig, requestedControlPlane, err := tptctl_config.GetThreeportConfig(CliArgs.ControlPlaneName)
+				threeportConfig, requestedControlPlane, err := tptctl_config.GetThreeportConfig(cliArgs.ControlPlaneName)
 				if err != nil {
 					cli.Error("failed to get threeport config: %w", err)
 					os.Exit(1)
@@ -1027,7 +1027,7 @@ func init() {
 		"field", "f", "", "Object field to get value for. If used, --output flag will be ignored.  *Only* the value of the desired field will be returned.  Will not return information on related objects, only direct attributes of the object itself.",
 	)
 	DescribeWordpressInstanceCmd.Flags().StringVarP(
-		&CliArgs.ControlPlaneName,
+		&cliArgs.ControlPlaneName,
 		"control-plane-name", "i", "", "Optional. Name of control plane. Will default to current control plane if not provided.",
 	)
 	DescribeWordpressInstanceCmd.Flags().StringVarP(

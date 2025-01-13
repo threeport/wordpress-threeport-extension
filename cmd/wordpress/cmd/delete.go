@@ -12,5 +12,5 @@ var DeleteCmd = &cobra.Command{
 }
 
 func init() {
-	WordpressCmd.AddCommand(DeleteCmd)
+	rootCmd.AddCommand(DeleteCmd)
 }

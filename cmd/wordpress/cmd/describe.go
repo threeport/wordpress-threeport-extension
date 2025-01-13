@@ -12,5 +12,5 @@ var DescribeCmd = &cobra.Command{
 }
 
 func init() {
-	WordpressCmd.AddCommand(DescribeCmd)
+	rootCmd.AddCommand(DescribeCmd)
 }

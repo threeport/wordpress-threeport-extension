@@ -12,5 +12,5 @@ var GetCmd = &cobra.Command{
 }
 
 func init() {
-	WordpressCmd.AddCommand(GetCmd)
+	rootCmd.AddCommand(GetCmd)
 }

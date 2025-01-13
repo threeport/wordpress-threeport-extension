@@ -114,7 +114,7 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
-	WordpressCmd.AddCommand(installCmd)
+	rootCmd.AddCommand(installCmd)
 
 	installCmd.Flags().BoolVarP(
 		&development,

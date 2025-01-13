@@ -120,10 +120,6 @@ func (Build) ApiImageDev() error {
 	}
 
 	build := Build{}
-	if err := build.ApiBinDev(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.ApiImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -138,10 +134,6 @@ func (Build) ApiImageDev() error {
 // ApiImageRelease builds and pushes a release REST API container image.
 func (Build) ApiImageRelease() error {
 	build := Build{}
-	if err := build.ApiBinRelease(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.ApiImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -242,10 +234,6 @@ func (Build) DbMigratorImageDev() error {
 	}
 
 	build := Build{}
-	if err := build.DbMigratorBinDev(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.DbMigratorImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -260,10 +248,6 @@ func (Build) DbMigratorImageDev() error {
 // DbMigratorImageRelease builds and pushes a release database migrator container image.
 func (Build) DbMigratorImageRelease() error {
 	build := Build{}
-	if err := build.DbMigratorBinRelease(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.DbMigratorImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -364,10 +348,6 @@ func (Build) WordpressControllerImageDev() error {
 	}
 
 	build := Build{}
-	if err := build.WordpressControllerBinDev(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.WordpressControllerImage(
 		installer.DevImageRepo,
 		version.GetVersion(),
@@ -382,10 +362,6 @@ func (Build) WordpressControllerImageDev() error {
 // WordpressControllerImageRelease builds and pushes a release wordpress-controller container image.
 func (Build) WordpressControllerImageRelease() error {
 	build := Build{}
-	if err := build.WordpressControllerImageRelease(); err != nil {
-		return fmt.Errorf("failed to build binary for image build: %w", err)
-	}
-
 	if err := build.WordpressControllerImage(
 		installer.ReleaseImageRepo,
 		version.GetVersion(),
@@ -544,8 +520,7 @@ func (Build) Plugin() error {
 		"go",
 		"build",
 		"-o",
-		"bin/wordpress.so",
-		"-buildmode=plugin",
+		"bin/wordpress",
 		"cmd/wordpress/main_gen.go",
 	)
 
@@ -554,7 +529,7 @@ func (Build) Plugin() error {
 		return fmt.Errorf("build failed for tptctl plugin with output '%s': %w", output, err)
 	}
 
-	fmt.Println("tptctl plugin built and available at bin/wordpress.so")
+	fmt.Println("tptctl plugin built and available at bin/wordpress")
 
 	return nil
 }
