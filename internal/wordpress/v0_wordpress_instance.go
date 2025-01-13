@@ -98,6 +98,59 @@ func v0WordpressInstanceCreated(
 		return 0, fmt.Errorf("failed to get wordpress definition: %w", err)
 	}
 
+	// get infra provider for kubernetes runtime - needed to determine storage
+	// class for wordpress PVC
+	infraProvider, err := tpclient.GetInfraProviderByKubernetesRuntimeInstanceID(
+		r.APIClient,
+		r.APIServer,
+		kubernetesRuntimeInstanceId,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to determine infra provider for Kubernetes runtime: %w", err)
+	}
+
+	// get the manifest for the PVC
+	pvcManifest, err := getPvcManifest(
+		*infraProvider,
+		*wordpressDefinition.Name,
+		*wordpressDefinition.Environment,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get Kubernetes manifest for persistent volume claim: %w", err)
+	}
+
+	// create the workload resource instance for the PVC
+	pvcWri := tpapi.WorkloadResourceInstance{
+		JSONDefinition:     pvcManifest,
+		WorkloadInstanceID: createdWorkloadInstance.ID,
+	}
+	_, err = tpclient.CreateWorkloadResourceInstance(
+		r.APIClient,
+		r.APIServer,
+		&pvcWri,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create workload resource instance for persistent volume claim: %w", err)
+	}
+
+	// trigger reconciliation to create the PVC
+	unreconciledWorkloadInstance := tpapi.WorkloadInstance{
+		Common: tpapi.Common{
+			ID: createdWorkloadInstance.ID,
+		},
+		Reconciliation: tpapi.Reconciliation{
+			Reconciled: util.Ptr(false),
+		},
+	}
+	_, err = tpclient.UpdateWorkloadInstance(
+		r.APIClient,
+		r.APIServer,
+		&unreconciledWorkloadInstance,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to update workload instance as unreconciled: %w", err)
+	}
+
 	// create relational database instance if requested
 	if *wordpressDefinition.ManagedDatabase {
 		// get relational database definition ID

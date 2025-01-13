@@ -1,9 +1,13 @@
 package wordpress
 
 import (
+	"errors"
 	"fmt"
 
+	tpapi "github.com/threeport/threeport/pkg/api/v0"
 	kube "github.com/threeport/threeport/pkg/kube/v0"
+	util "github.com/threeport/threeport/pkg/util/v0"
+	"gorm.io/datatypes"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -943,37 +947,6 @@ mysqladmin status -uroot -p"${password_aux}"
 		return yamlDoc, fmt.Errorf("failed to append object to YAML manifest: %w", err)
 	}
 
-	var persistentVolumeClaimWordpress = &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"kind":       "PersistentVolumeClaim",
-			"apiVersion": "v1",
-			"metadata": map[string]interface{}{
-				"name":      fmt.Sprintf("%s-wordpress", definitionName),
-				"namespace": "default",
-				"labels": map[string]interface{}{
-					"app.kubernetes.io/name":       "wordpress",
-					"app.kubernetes.io/instance":   definitionName,
-					"app.kubernetes.io/managed-by": "wordrpess-threepport-extension",
-					"environment":                  environment,
-				},
-			},
-			"spec": map[string]interface{}{
-				"accessModes": []interface{}{
-					"ReadWriteOnce",
-				},
-				"resources": map[string]interface{}{
-					"requests": map[string]interface{}{
-						"storage": "10Gi",
-					},
-				},
-			},
-		},
-	}
-	yamlDoc, err = kube.AppendObjectToYamlDoc(persistentVolumeClaimWordpress, yamlDoc)
-	if err != nil {
-		return yamlDoc, fmt.Errorf("failed to append object to YAML manifest: %w", err)
-	}
-
 	var serviceWordpress = &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
@@ -1023,4 +996,57 @@ mysqladmin status -uroot -p"${password_aux}"
 // getWordpressServiceName returns the WordPress deployment's service name.
 func getWordpressServiceName(definitionName string) string {
 	return fmt.Sprintf("%s-wordpress", definitionName)
+}
+
+// getPvcManifest returns the JSON for the persistent volume claim with the
+// storage class name set for the infra provider.
+func getPvcManifest(
+	infraProvider string,
+	definitionName string,
+	environment string,
+) (*datatypes.JSON, error) {
+	var storageClassName string
+	switch infraProvider {
+	case tpapi.KubernetesRuntimeInfraProviderKind:
+		storageClassName = "standard"
+	case tpapi.KubernetesRuntimeInfraProviderEKS:
+		storageClassName = "gp2"
+	default:
+		return nil, errors.New("unrecognized infra provider")
+	}
+
+	var persistentVolumeClaimWordpress = &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "PersistentVolumeClaim",
+			"apiVersion": "v1",
+			"metadata": map[string]interface{}{
+				"name":      fmt.Sprintf("%s-wordpress", definitionName),
+				"namespace": "default",
+				"labels": map[string]interface{}{
+					"app.kubernetes.io/name":       "wordpress",
+					"app.kubernetes.io/instance":   definitionName,
+					"app.kubernetes.io/managed-by": "wordrpess-threepport-extension",
+					"environment":                  environment,
+				},
+			},
+			"spec": map[string]interface{}{
+				"storageClassName": storageClassName,
+				"accessModes": []interface{}{
+					"ReadWriteOnce",
+				},
+				"resources": map[string]interface{}{
+					"requests": map[string]interface{}{
+						"storage": "10Gi",
+					},
+				},
+			},
+		},
+	}
+
+	jsonData, err := util.UnstructuredToDatatypesJson(persistentVolumeClaimWordpress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate JSON for PVC: %w", err)
+	}
+
+	return &jsonData, nil
 }

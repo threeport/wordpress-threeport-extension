@@ -1,8 +1,6 @@
 module github.com/threeport/wordpress-threeport-extension
 
-replace github.com/threeport/threeport => /Users/lander2k2/Projects/src/github.com/lander2k2/threeport
-
-go 1.22.2
+go 1.23.4
 
 require (
 	github.com/ghodss/yaml v1.0.0
@@ -15,10 +13,10 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/magefile/mage v1.15.0
 	github.com/namsral/flag v1.7.4-pre
-	github.com/nats-io/nats.go v1.37.0
-	github.com/pressly/goose/v3 v3.21.1
+	github.com/nats-io/nats.go v1.34.1
+	github.com/pressly/goose/v3 v3.19.2
 	github.com/spf13/cobra v1.8.1
-	github.com/threeport/threeport v0.0.0-00010101000000-000000000000
+	github.com/threeport/threeport v0.6.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.9
@@ -115,7 +113,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/nukleros/aws-builder v0.4.6 // indirect
+	github.com/nukleros/aws-builder v0.4.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
